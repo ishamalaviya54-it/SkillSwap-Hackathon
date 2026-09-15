@@ -28,6 +28,7 @@ const demoCommunitySkills = [
   { id: 'skill-english', user_id: 'zoe', user_name: 'Zoe Williams', name: 'English', category: 'Language', description: 'Writing confidence and conversational practice.' },
 ];
 
+
 const demoRequests = [];
 
 const getStoredRequests = () => {
@@ -70,9 +71,19 @@ function App() {
   const [skillForm, setSkillForm] = useState({ name: '', category: '', level: '', description: '' });
   const [mySkills, setMySkills] = useState(() => JSON.parse(localStorage.getItem('skillswap-my-skills') || '[]'));
   const [studentSearch, setStudentSearch] = useState('');
+  const [communitySearch, setCommunitySearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: "🎉 Welcome to SkillSwap AI!", read: false },
+    { id: 2, text: "📚 Arjun Mehta added a React skill.", read: false },
+    { id: 3, text: "🔄 Maya Patel sent you a swap request.", read: false },
+  ]);
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const isForgotPassword = authMode === 'forgot';
 
@@ -244,6 +255,20 @@ function App() {
         return updatedRequests;
       });
       setSuccess('Demo swap request sent!');
+      setToastMessage(`Swap request sent to ${selectedSkill.user_name}! 🎉`);
+setShowToast(true);
+
+setTimeout(() => {
+  setShowToast(false);
+}, 3000);
+      setNotifications((prev) => [
+  {
+    id: Date.now(),
+    text: `🔄 Swap request sent to ${selectedSkill.user_name} for ${selectedSkill.name}.`,
+    read: false,
+  },
+  ...prev,
+]);
       setLoading(false);
       return;
     }
@@ -273,8 +298,31 @@ function App() {
         request.id === requestId ? { ...request, status } : request
       ));
       localStorage.setItem('skillswap-swap-requests', JSON.stringify(updatedRequests));
+      setNotifications((prev) => [
+  {
+    id: Date.now(),
+    text: `✅ Swap request ${status} successfully.`,
+    read: false,
+  },
+  ...prev,
+]);
       return updatedRequests;
     });
+    setToastMessage(`🎉 Swap request ${status}!`);
+setShowToast(true);
+
+setTimeout(() => {
+  setShowToast(false);
+}, 3000);
+
+setNotifications((prev) => [
+  {
+    id: Date.now(),
+    text: `🎉 Swap request ${status}!`,
+    read: false,
+  },
+  ...prev,
+]);
   };
 
   const handleClearSwapRequests = () => {
@@ -300,13 +348,45 @@ function App() {
     setUser(updatedUser);
     setSuccess('Profile changes saved!');
   };
+  const filteredCommunitySkills = skills.filter((skill) => {
+  const query = communitySearch.trim().toLowerCase();
+  if (!query) return true;
 
+  return (
+    skill.name.toLowerCase().includes(query) ||
+    skill.user_name.toLowerCase().includes(query)
+  );
+  });
+  const aiMatches = mySkills.flatMap((mySkill) => {
+  return skills
+    .filter(
+      (skill) =>
+        skill.name.toLowerCase() !== mySkill.name.toLowerCase()
+    )
+    .slice(0, 3)
+    .map((skill) => ({
+      student: skill.user_name,
+      skill: skill.name,
+      reason: `Because you added ${mySkill.name}, this is a great skill to swap with.`,
+    }));
+  });
   const filteredStudents = users.filter((member) => {
     const query = studentSearch.trim().toLowerCase();
     if (!query) return true;
     return member.name.toLowerCase().includes(query)
       || member.skills?.some((skill) => skill.name.toLowerCase().includes(query));
   });
+  const completedSwaps = requests.filter(
+  (request) => request.status === "Accepted"
+).length;
+
+const profileCompletion =
+  profile.name &&
+  profile.email &&
+  profile.skillsOffered &&
+  profile.skillsWanted
+    ? 100
+    : 75;
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -422,6 +502,7 @@ function App() {
   if (dashboardView === 'profile') {
     return (
       <div className="min-vh-100 bg-light">
+       
         <nav className="navbar dashboard-navbar shadow-sm">
           <div className="container">
             <a className="navbar-brand fw-bold" href="#">SkillSwap AI</a>
@@ -473,6 +554,11 @@ function App() {
 
   return (
     <div className="min-vh-100 bg-light">
+      {showToast && (
+      <div className="toast-popup">
+        {toastMessage}
+      </div>
+      )}
       <nav className="navbar dashboard-navbar shadow-sm">
         <div className="container">
           <a className="navbar-brand fw-bold" href="#">SkillSwap AI</a>
@@ -481,6 +567,25 @@ function App() {
               <strong>{user.name}</strong>
               <small>{user.email}</small>
             </div>
+            <div className="position-relative">
+            <button
+              className="btn profile-icon"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              🔔
+            </button>
+
+            {showNotifications && (
+              <div className="notification-box">
+                <h6>Notifications</h6>
+                {notifications.map((item) => (
+                  <div key={item.id} className="notification-item">
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
             <button className="btn profile-icon" onClick={() => setDashboardView('profile')} aria-label="Open profile" title="Open profile">
               {user.name?.charAt(0).toUpperCase()}
             </button>
@@ -491,6 +596,33 @@ function App() {
 
       {
         <div className="container py-4">
+          <div className="row g-3 mb-4">
+
+  <div className="col-md-4">
+    <div className="progress-card">
+      <h6>📚 Skills Added</h6>
+      <h2>{mySkills.length}</h2>
+      <p>Total skills you have shared.</p>
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="progress-card">
+      <h6>🔄 Swaps Completed</h6>
+      <h2>{completedSwaps}</h2>
+      <p>Accepted swap requests.</p>
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="progress-card">
+      <h6>⭐ Profile Completion</h6>
+      <h2>{profileCompletion}%</h2>
+      <p>Your SkillSwap profile status.</p>
+    </div>
+  </div>
+
+</div>
           <div className="row g-4">
             <div className="col-lg-4">
               <div className="card shadow-sm border-0 rounded-4">
@@ -581,6 +713,19 @@ function App() {
                 <div className="card-body">
                   <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <div>
+                      <div className="card shadow-sm border-0 rounded-4 mb-4">
+  <div className="card-body">
+    <h4 className="mb-3">🤖 AI Skill Match</h4>
+
+    {aiMatches.map((match, index) => (
+      <div key={index} className="community-skill-card mb-3">
+        <h6>{match.name}</h6>
+        <p className="mb-1"><strong>Recommended Skill:</strong> {match.skill}</p>
+        <small>{match.reason}</small>
+      </div>
+    ))}
+  </div>
+</div>
                       <h4 className="mb-1">My Skills</h4>
                       <p className="text-muted small mb-0">Skills you’re ready to share.</p>
                     </div>
@@ -615,9 +760,16 @@ function App() {
               <div className="card shadow-sm border-0 rounded-4 mb-4">
                 <div className="card-body">
                   <h4 className="mb-3">Community skills</h4>
+                  <input
+  type="search"
+  className="form-control mb-3"
+  placeholder="Search skills or student..."
+  value={communitySearch}
+  onChange={(e) => setCommunitySearch(e.target.value)}
+/>
                   <div className="row g-3">
                     {skills.length > 0 ? (
-                      skills.map((skill) => (
+                      filteredCommunitySkills.map((skill) => (
                         <div key={skill.id} className="col-md-6">
                           <div className="community-skill-card h-100">
                             <div className="d-flex justify-content-between align-items-center mb-2">

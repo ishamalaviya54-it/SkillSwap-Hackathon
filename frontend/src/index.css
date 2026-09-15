@@ -138,3 +138,75 @@ button, a { transition: all 0.2s ease; }
   .auth-card { border-radius: 22px; padding: 1.5rem; }
   .auth-page { align-items: flex-start; }
 }
+.notification-box {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 260px;
+  background: white;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.2);
+  z-index: 999;
+}
+
+.notification-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #ececec;
+  font-size: 14px;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+.toast-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: white;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.35);
+  z-index: 2000;
+  animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.progress-card{
+  background: linear-gradient(135deg,#7C3AED,#A855F7);
+  color:white;
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 8px 20px rgba(124,58,237,.25);
+  transition:0.3s;
+}
+
+.progress-card:hover{
+  transform:translateY(-5px);
+}
+
+.progress-card h6{
+  color:#EDE9FE;
+  margin-bottom:10px;
+}
+
+.progress-card h2{
+  font-size:34px;
+  font-weight:bold;
+}
+
+.progress-card p{
+  margin:0;
+  color:#F3E8FF;
+}
