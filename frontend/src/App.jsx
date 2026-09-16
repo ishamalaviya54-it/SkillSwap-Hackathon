@@ -50,6 +50,46 @@ const defaultProfile = {
   skillsWanted: 'UI/UX, Python',
   availability: 'Weekday evenings',
 };
+const translations = {
+  English: {
+    about: "About",
+    settings: "Settings",
+    dashboard: "Dashboard",
+    logout: "Logout",
+    addSkill: "Add Skill",
+    mySkills: "My Skills",
+    communitySkills: "Community Skills",
+    swapRequests: "Swap Requests",
+    students: "Students",
+    notifications: "Notifications"
+  },
+
+  Gujarati: {
+    about: "અમારા વિશે",
+    settings: "સેટિંગ્સ",
+    dashboard: "ડેશબોર્ડ",
+    logout: "લોગઆઉટ",
+    addSkill: "સ્કિલ ઉમેરો",
+    mySkills: "મારી સ્કિલ્સ",
+    communitySkills: "કોમ્યુનિટી સ્કિલ્સ",
+    swapRequests: "સ્વેપ રિક્વેસ્ટ",
+    students: "વિદ્યાર્થીઓ",
+    notifications: "નોટિફિકેશન"
+  },
+
+  Hindi: {
+    about: "हमारे बारे में",
+    settings: "सेटिंग्स",
+    dashboard: "डैशबोर्ड",
+    logout: "लॉगआउट",
+    addSkill: "स्किल जोड़ें",
+    mySkills: "मेरी स्किल्स",
+    communitySkills: "कम्युनिटी स्किल्स",
+    swapRequests: "स्वैप रिक्वेस्ट",
+    students: "स्टूडेंट्स",
+    notifications: "नोटिफिकेशन"
+  }
+};
 
 function App() {
   const [authMode, setAuthMode] = useState('login');
@@ -57,13 +97,27 @@ function App() {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
   const [dashboardView, setDashboardView] = useState('dashboard');
   const [profile, setProfile] = useState(() => {
-    try {
-      const savedProfile = JSON.parse(localStorage.getItem('skillswap-profile') || 'null');
-      return savedProfile || { ...defaultProfile, name: user?.name || defaultProfile.name, email: user?.email || defaultProfile.email };
-    } catch {
-      return defaultProfile;
-    }
+  try {
+    const savedProfile = JSON.parse(localStorage.getItem("skillswap-profile") || "null");
+    return savedProfile || {
+      ...defaultProfile,
+      name: user?.name || defaultProfile.name,
+      email: user?.email || defaultProfile.email,
+    };
+  } catch {
+    return defaultProfile;
+  }
+});
+
+
+  const [settings, setSettings] = useState(() => {
+    return JSON.parse(localStorage.getItem("skillswap-settings")) || {
+      notifications: true,
+      language: "English",
+      darkMode: false,
+    };
   });
+  const t = translations[settings.language];
   const [users, setUsers] = useState(demoStudents);
   const [skills, setSkills] = useState(demoCommunitySkills);
   const [requests, setRequests] = useState(getStoredRequests);
@@ -121,6 +175,16 @@ function App() {
       fetchDashboard();
     }
   }, [token]);
+
+  useEffect(() => {
+  if (showToast) {
+    const timer = setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }
+}, [showToast]);
 
   const handleFieldChange = (event) => {
     const { name, value } = event.target;
@@ -261,14 +325,16 @@ setShowToast(true);
 setTimeout(() => {
   setShowToast(false);
 }, 3000);
-      setNotifications((prev) => [
-  {
-    id: Date.now(),
-    text: `🔄 Swap request sent to ${selectedSkill.user_name} for ${selectedSkill.name}.`,
-    read: false,
-  },
-  ...prev,
-]);
+      if (settings.notifications) {
+  setNotifications((prev) => [
+    {
+      id: Date.now(),
+      text: `🔄 Swap request sent to ${selectedSkill.user_name} for ${selectedSkill.name}.`,
+      read: false,
+    },
+    ...prev,
+  ]);
+}
       setLoading(false);
       return;
     }
@@ -292,38 +358,35 @@ setTimeout(() => {
     }
   };
 
-  const handleRequestDecision = (requestId, status) => {
-    setRequests((prev) => {
-      const updatedRequests = prev.map((request) => (
-        request.id === requestId ? { ...request, status } : request
-      ));
-      localStorage.setItem('skillswap-swap-requests', JSON.stringify(updatedRequests));
-      setNotifications((prev) => [
-  {
-    id: Date.now(),
-    text: `✅ Swap request ${status} successfully.`,
-    read: false,
-  },
-  ...prev,
-]);
-      return updatedRequests;
-    });
-    setToastMessage(`🎉 Swap request ${status}!`);
-setShowToast(true);
+ const handleRequestDecision = (requestId, status) => {
+  const updatedRequests = requests.map((request) =>
+    request.id === requestId
+      ? { ...request, status }
+      : request
+  );
 
-setTimeout(() => {
-  setShowToast(false);
-}, 3000);
+  setRequests(updatedRequests);
+  localStorage.setItem(
+    "skillswap-swap-requests",
+    JSON.stringify(updatedRequests)
+  );
 
-setNotifications((prev) => [
-  {
-    id: Date.now(),
-    text: `🎉 Swap request ${status}!`,
-    read: false,
-  },
-  ...prev,
-]);
-  };
+  setToastMessage(`🎉 Swap request ${status}!`);
+  setShowToast(true);
+
+  if (settings.notifications) {
+    setNotifications((prev) => [
+      {
+        id: Date.now(),
+        text: `🎉 Swap request ${status}!`,
+        read: false,
+      },
+      ...prev,
+    ]);
+  }
+
+  setSuccess(`Swap request ${status}!`);
+};
 
   const handleClearSwapRequests = () => {
     setRequests([]);
@@ -340,14 +403,41 @@ setNotifications((prev) => [
     setProfile((previousProfile) => ({ ...previousProfile, [name]: value }));
   };
 
-  const handleProfileSave = (event) => {
-    event.preventDefault();
-    localStorage.setItem('skillswap-profile', JSON.stringify(profile));
-    const updatedUser = { ...user, name: profile.name, email: profile.email };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-    setSuccess('Profile changes saved!');
+  const handleSettingsChange = (e) => {
+  const { name, value, checked, type } = e.target;
+
+  setSettings((prev) => ({
+    ...prev,
+    [name]: type === "checkbox" ? checked : value,
+  }));
+};
+
+const handleSettingsSave = () => {
+  localStorage.setItem("skillswap-settings", JSON.stringify(settings));
+
+  if (!settings.notifications) {
+    setShowNotifications(false);
+  }
+
+  setSuccess("Settings saved successfully!");
+};
+
+const handleProfileSave = (event) => {
+  event.preventDefault();
+
+  localStorage.setItem("skillswap-profile", JSON.stringify(profile));
+
+  const updatedUser = {
+    ...user,
+    name: profile.name,
+    email: profile.email,
   };
+
+  localStorage.setItem("user", JSON.stringify(updatedUser));
+  setUser(updatedUser);
+  setSuccess("Profile changes saved!");
+};
+
   const filteredCommunitySkills = skills.filter((skill) => {
   const query = communitySearch.trim().toLowerCase();
   if (!query) return true;
@@ -501,7 +591,7 @@ const profileCompletion =
 
   if (dashboardView === 'profile') {
     return (
-      <div className="min-vh-100 bg-light">
+      <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
        
         <nav className="navbar dashboard-navbar shadow-sm">
           <div className="container">
@@ -551,9 +641,150 @@ const profileCompletion =
       </div>
     );
   }
-
+  if (dashboardView === 'about') {
+    
   return (
-    <div className="min-vh-100 bg-light">
+    <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
+      <nav className="navbar dashboard-navbar shadow-sm">
+        <div className="container">
+          <a className="navbar-brand fw-bold">SkillSwap AI</a>
+          <button
+            className="btn profile-nav-button"
+            onClick={() => setDashboardView('dashboard')}
+          >
+            ← Dashboard
+          </button>
+        </div>
+      </nav>
+
+      <main className="container py-5">
+        <div className="card border-0 shadow-sm rounded-4 p-4">
+          <h2 className="text-center mb-3">💜 About SkillSwap AI</h2>
+          <p className="text-center text-muted">
+            SkillSwap AI is a student-to-student learning platform where students
+            can exchange skills, connect with peers, and grow together.
+          </p>
+
+          <hr />
+
+          <h4>📚 What can you do?</h4>
+          <ul>
+            <li>Add your skills.</li>
+            <li>Request skill swaps with other students.</li>
+            <li>Get AI-based skill recommendations.</li>
+            <li>Track completed swaps and profile progress.</li>
+          </ul>
+
+          <hr />
+
+          <h4>❓ Frequently Asked Questions</h4>
+
+          <p><strong>1. What is SkillSwap AI?</strong></p>
+          <p>A platform where college students teach and learn skills from each other.</p>
+
+          <p><strong>2. Is SkillSwap AI free?</strong></p>
+          <p>Yes. It is completely free for students.</p>
+
+          <p><strong>3. How do I request a swap?</strong></p>
+          <p>Click the Request Swap button in Community Skills.</p>
+
+          <p><strong>4. How does AI Match work?</strong></p>
+          <p>It recommends students based on the skills you add.</p>
+
+          <hr />
+
+          <h4>📧 Contact Us</h4>
+          <p>Email: support@skillswap.ai</p>
+          <p>College: JG University</p>
+
+          <div className="text-center mt-4">
+            <button
+              className="btn add-skill-button"
+              onClick={() => setDashboardView('dashboard')}
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+  if (dashboardView === 'settings') {
+  return (
+    <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
+      <nav className="navbar dashboard-navbar shadow-sm">
+        <div className="container">
+          <a className="navbar-brand fw-bold">SkillSwap AI</a>
+
+          <button
+            className="btn profile-nav-button"
+            onClick={() => setDashboardView('dashboard')}
+          >
+            ← Dashboard
+          </button>
+        </div>
+      </nav>
+
+      <main className="container py-5">
+        <div className="card border-0 shadow-sm rounded-4 p-4">
+          <h2 className="mb-4 text-center">⚙️ Settings</h2>
+
+          <div className="form-check form-switch mb-4">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              name="notifications"
+              checked={settings.notifications}
+              onChange={handleSettingsChange}
+            />
+            <label className="form-check-label ms-2">
+              Enable Notifications
+            </label>
+          </div>
+
+          <div className="mb-4">
+            <label className="form-label">Language</label>
+            <select
+              className="form-select"
+              name="language"
+              value={settings.language}
+              onChange={handleSettingsChange}
+            >
+              <option>English</option>
+              <option>Hindi</option>
+              <option>Gujarati</option>
+            </select>
+          </div>
+
+          <div className="form-check form-switch mb-4">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              name="darkMode"
+              checked={settings.darkMode}
+              onChange={handleSettingsChange}
+            />
+            <label className="form-check-label ms-2">
+              Dark Mode (Demo)
+            </label>
+          </div>
+
+          <div className="text-center">
+            <button
+              className="btn add-skill-button"
+              onClick={handleSettingsSave}
+            >
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+  return (
+    <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
       {showToast && (
       <div className="toast-popup">
         {toastMessage}
@@ -564,37 +795,69 @@ const profileCompletion =
           <a className="navbar-brand fw-bold" href="#">SkillSwap AI</a>
           <div className="d-flex align-items-center gap-2 dashboard-header-actions">
             <div className="dashboard-user-summary">
-              <strong>{user.name}</strong>
-              <small>{user.email}</small>
-            </div>
-            <div className="position-relative">
-            <button
-              className="btn profile-icon"
-              onClick={() => setShowNotifications(!showNotifications)}
-            >
-              🔔
-            </button>
+  <strong>{user.name}</strong>
+  <small>{user.email}</small>
+</div>
 
-            {showNotifications && (
-              <div className="notification-box">
-                <h6>Notifications</h6>
-                {notifications.map((item) => (
-                  <div key={item.id} className="notification-item">
-                    {item.text}
-                  </div>
-                ))}
-              </div>
-            )}
+<button
+  className="btn profile-nav-button"
+  onClick={() => setDashboardView("about")}
+>
+  {t.about}
+</button>
+
+<button
+  className="btn profile-nav-button"
+  onClick={() => setDashboardView("settings")}
+>
+  {t.settings}
+</button>
+<button className="btn dashboard-logout" onClick={handleLogout}>
+  {t.logout} <span aria-hidden="true">→</span>
+</button>
+
+<div className="position-relative">
+  <button
+  className="btn profile-icon"
+  onClick={() => {
+    if (!settings.notifications) return;
+    setShowNotifications(!showNotifications);
+  }}
+>
+  🔔
+</button>
+  {showNotifications && settings.notifications && (
+    <div className="notification-box">
+      <h6>Notifications</h6>
+
+      {notifications.length === 0 ? (
+        <p className="small m-0">No notifications</p>
+      ) : (
+        notifications.map((item) => (
+          <div key={item.id} className="notification-item">
+            {item.text}
           </div>
-            <button className="btn profile-icon" onClick={() => setDashboardView('profile')} aria-label="Open profile" title="Open profile">
-              {user.name?.charAt(0).toUpperCase()}
-            </button>
-            <button className="btn dashboard-logout" onClick={handleLogout}>Logout <span aria-hidden="true">→</span></button>
+        ))
+      )}
+    </div>
+  )}
+</div>
+
+<button
+  className="btn profile-icon"
+  onClick={() => setDashboardView("profile")}
+>
+  {user.name?.charAt(0).toUpperCase()}
+</button>
+
+<button className="btn dashboard-logout" onClick={handleLogout}>
+  Logout <span aria-hidden="true">→</span>
+</button>
           </div>
         </div>
       </nav>
 
-      {
+      
         <div className="container py-4">
           <div className="row g-3 mb-4">
 
@@ -698,7 +961,7 @@ const profileCompletion =
                     </div>
 
                     <button className="btn add-skill-button w-100" type="submit">
-                      Add Skill <span aria-hidden="true">+</span>
+                      {t.addSkill} <span aria-hidden="true">+</span>
                     </button>
                   </form>
                 </div>
@@ -713,25 +976,39 @@ const profileCompletion =
                 <div className="card-body">
                   <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <div>
-                      <div className="card shadow-sm border-0 rounded-4 mb-4">
+                      
+                    
+<div className="card shadow-sm border-0 rounded-4 mb-4">
   <div className="card-body">
     <h4 className="mb-3">🤖 AI Skill Match</h4>
 
-    {aiMatches.map((match, index) => (
-      <div key={index} className="community-skill-card mb-3">
-        <h6>{match.name}</h6>
-        <p className="mb-1"><strong>Recommended Skill:</strong> {match.skill}</p>
-        <small>{match.reason}</small>
-      </div>
-    ))}
+    {mySkills.length === 0 ? (
+      <p className="text-muted">
+        Add a skill to see AI recommendations.
+      </p>
+    ) : (
+      mySkills.map((skill, index) => (
+        <div key={index} className="community-skill-card mb-3">
+          <h6>{skill.name}</h6>
+          <p><strong>Recommended Skill:</strong> UI/UX</p>
+          <small>AI suggests students who can help you improve this skill.</small>
+        </div>
+      ))
+    )}
   </div>
 </div>
-                      <h4 className="mb-1">My Skills</h4>
-                      <p className="text-muted small mb-0">Skills you’re ready to share.</p>
+    
+                    <h4 className="mb-1">{t.mySkills}</h4>
+
+<p className="text-muted small mb-0">
+  {t.skillsReady}
+</p>
                     </div>
                     <div className="d-flex align-items-center gap-2">
                       <span className="my-skills-count">{mySkills.length}</span>
-                      <button className="btn clear-requests-button" onClick={handleClearMySkills} disabled={mySkills.length === 0}>Clear All Skills</button>
+                      <button className="btn clear-requests-button" onClick={handleClearMySkills} disabled={mySkills.length === 0}>
+                        {t.clearSkills}
+                      </button>
                     </div>
                   </div>
                   {mySkills.length > 0 ? (
@@ -759,7 +1036,7 @@ const profileCompletion =
 
               <div className="card shadow-sm border-0 rounded-4 mb-4">
                 <div className="card-body">
-                  <h4 className="mb-3">Community skills</h4>
+                  <h4 className="mb-3">{t.communitySkills}</h4>
                   <input
   type="search"
   className="form-control mb-3"
@@ -803,8 +1080,10 @@ const profileCompletion =
               <div className="card shadow-sm border-0 rounded-4 mb-4">
                 <div className="card-body">
                   <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                    <h4 className="mb-0">Swap requests</h4>
-                    <button className="btn clear-requests-button" onClick={handleClearSwapRequests} disabled={requests.length === 0}>Clear All</button>
+                    <h4 className="mb-0">{t.swapRequests}</h4>
+                    <button className="btn clear-requests-button" onClick={handleClearSwapRequests} disabled={requests.length === 0}>
+                      {t.clearRequests}
+                    </button>
                   </div>
                   {requests.length > 0 ? (
                     <div className="row g-3">
@@ -838,7 +1117,7 @@ const profileCompletion =
               <div className="card shadow-sm border-0 rounded-4">
                 <div className="card-body">
                   <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                    <h4 className="mb-0">Students</h4>
+                    <h4 className="mb-0">{t.students}</h4>
                     <div className="student-search">
                       <span aria-hidden="true">⌕</span>
                       <input
@@ -888,7 +1167,7 @@ const profileCompletion =
             </div>
           </div>
         </div>
-      }
+      
     </div>
   );
 }

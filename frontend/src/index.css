@@ -210,3 +210,60 @@ button, a { transition: all 0.2s ease; }
   margin:0;
   color:#F3E8FF;
 }
+/* ===== Dark Mode ===== */
+
+.dark-theme {
+  background: #121212;
+  color: white;
+  min-height: 100vh;
+}
+
+.dark-theme .card,
+.dark-theme .progress-card,
+.dark-theme .community-skill-card,
+.dark-theme .my-skill-card,
+.dark-theme .swap-request-card,
+.dark-theme .student-card,
+.dark-theme .profile-hero {
+  background: #1e1e1e !important;
+  color: white !important;
+}
+
+.dark-theme h1,
+.dark-theme h2,
+.dark-theme h3,
+.dark-theme h4,
+.dark-theme h5,
+.dark-theme h6,
+.dark-theme p,
+.dark-theme strong,
+.dark-theme small,
+.dark-theme label,
+.dark-theme li {
+  color: white !important;
+}
+
+.dark-theme .text-muted {
+  color: #d1d5db !important;
+}
+
+.dark-theme .form-control,
+.dark-theme .form-select,
+.dark-theme textarea {
+  background: #2b2b2b;
+  color: white;
+  border: 1px solid #555;
+}
+
+.dark-theme .form-control::placeholder {
+  color: #bbb;
+}
+
+.dark-theme .dashboard-navbar {
+  background: #2a174a !important;
+}
+
+.dark-theme .notification-box {
+  background: #1f1f1f;
+  color: white;
+}
