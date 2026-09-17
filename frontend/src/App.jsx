@@ -515,6 +515,14 @@ const handleSettingsSave = () => {
   setSuccess("Settings saved successfully!");
 };
 
+const handleProfileDarkModeToggle = () => {
+  setSettings((previousSettings) => {
+    const updatedSettings = { ...previousSettings, darkMode: !previousSettings.darkMode };
+    localStorage.setItem('skillswap-settings', JSON.stringify(updatedSettings));
+    return updatedSettings;
+  });
+};
+
 const handleProfileSave = (event) => {
   event.preventDefault();
 
@@ -727,12 +735,20 @@ const profileCompletion =
   if (dashboardView === 'profile') {
     return (
       <ProfileScreen
+        profile={profile}
         settings={settings}
         onBack={() => setDashboardView('dashboard')}
         onSettings={() => setDashboardView('settings')}
+        onAbout={() => setDashboardView('about')}
+        onLogout={handleLogout}
+        onToggleDarkMode={handleProfileDarkModeToggle}
+        onClearNotifications={() => setNotifications([])}
         onExplore={() => setDashboardView('explore')}
         onPost={() => setDashboardView('post')}
         onMessages={() => setDashboardView('messages')}
+        onProfileChange={handleProfileChange}
+        onProfileSave={handleProfileSave}
+        stats={{ skills: mySkills.length || 5, swaps: requests.filter((request) => request.status === 'Accepted').length || 3, followers: 12, following: 8 }}
       />
     );
   }
@@ -1556,34 +1572,90 @@ function ScreenBottomNav({ current, onHome, onExplore, onPost, onMessages, onNot
   );
 }
 
-function ProfileScreen({ settings, onBack, onSettings, onExplore, onPost, onMessages }) {
+function ProfileScreen({ profile, settings, onBack, onSettings, onAbout, onLogout, onToggleDarkMode, onClearNotifications, onExplore, onPost, onMessages, onProfileChange, onProfileSave, stats }) {
   const [activeTab, setActiveTab] = useState('My Skills');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [profilePublic, setProfilePublic] = useState(true);
+  const [profileToast, setProfileToast] = useState('');
+  const menuRef = useRef(null);
   const skills = [
     { name: 'React Development', mode: 'Teaching', learners: '3 learners', icon: '</>', tone: 'violet' },
     { name: 'UI/UX Design', mode: 'Learning', learners: '2 learners', icon: '✦', tone: 'blue' },
     { name: 'Java Programming', mode: 'Teaching', learners: '1 learner', icon: 'J', tone: 'green' },
     { name: 'Graphic Design', mode: 'Learning', learners: '1 learner', icon: '✎', tone: 'peach' },
   ];
+  const learning = [
+    { name: 'Python Programming', progress: 70 },
+    { name: 'Figma UI Design', progress: 45 },
+    { name: 'Communication Skills', progress: 90 },
+    { name: 'Android Development', progress: 30 },
+  ];
+  const reviews = [
+    { name: 'Aarav Patel', initials: 'AP', rating: '★★★★★', comment: 'Great React mentor.' },
+    { name: 'Neha Soni', initials: 'NS', rating: '★★★★', comment: 'Helpful UI/UX guidance.' },
+    { name: 'Maya Patel', initials: 'MP', rating: '★★★★★', comment: 'Easy to learn with Isha.' },
+    { name: 'Krisha Mehta', initials: 'KM', rating: '★★★★★', comment: 'Very supportive during skill swap.' },
+  ];
+
+  useEffect(() => {
+    const closeMenu = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', closeMenu);
+    return () => document.removeEventListener('mousedown', closeMenu);
+  }, []);
+
+  useEffect(() => {
+    if (!profileToast) return undefined;
+    const timer = window.setTimeout(() => setProfileToast(''), 3000);
+    return () => window.clearTimeout(timer);
+  }, [profileToast]);
+
+  const saveProfile = (event) => {
+    onProfileSave(event);
+    setEditOpen(false);
+    setProfileToast('Profile updated successfully!');
+  };
+
+  const chooseMenuItem = (action) => {
+    setMenuOpen(false);
+    action();
+  };
 
   return (
     <div className={`profile-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
       <header className="profile-screen-header">
         <button className="profile-screen-icon" aria-label="Back to dashboard" onClick={onBack}>←</button>
         <strong>SkillSwap AI</strong>
-        <button className="profile-screen-icon" aria-label="Open settings" onClick={onSettings}>☰</button>
+        <div className="profile-menu-wrap" ref={menuRef}>
+          <button className="profile-screen-icon" aria-label="Open profile menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>☰</button>
+          {menuOpen ? <div className="profile-menu" role="menu">
+            <button type="button" onClick={() => chooseMenuItem(onSettings)}>⚙️ Settings</button>
+            <button type="button" onClick={() => chooseMenuItem(onToggleDarkMode)}>🌙 Dark Mode</button>
+            <button type="button" onClick={() => chooseMenuItem(onSettings)}>🌐 Language</button>
+            <button type="button" onClick={() => chooseMenuItem(onAbout)}>ℹ️ About</button>
+            <button type="button" onClick={() => { setMenuOpen(false); setPrivacyOpen(true); }}>🔒 Privacy &amp; Security</button>
+            <button type="button" onClick={() => { setMenuOpen(false); setHelpOpen(true); }}>📞 Help &amp; Support</button>
+            <button type="button" onClick={() => chooseMenuItem(onLogout)}>🚪 Logout</button>
+          </div> : null}
+        </div>
       </header>
       <main className="profile-screen-content">
         <section className="profile-summary">
           <div className="profile-screen-avatar">IM</div>
-          <h1>Isha Malaviya</h1>
-          <p>B.Sc(IT) <span>•</span> 2nd Year</p>
+          <h1>{profile.name || 'Isha Malaviya'}</h1>
+          <p>{profile.department || 'iMSC(IT)'} <span>•</span> 3rd Year</p>
           <div className="profile-stats">
-            <div><strong>5</strong><span>Skills</span></div>
-            <div><strong>3</strong><span>Swaps</span></div>
-            <div><strong>12</strong><span>Followers</span></div>
-            <div><strong>8</strong><span>Following</span></div>
+            <div><strong>{stats.skills}</strong><span>Skills</span></div>
+            <div><strong>{stats.swaps}</strong><span>Swaps</span></div>
+            <div><strong>{stats.followers}</strong><span>Followers</span></div>
+            <div><strong>{stats.following}</strong><span>Following</span></div>
           </div>
-          <button className="profile-edit-button" onClick={onSettings}>Edit Profile <span>→</span></button>
+          <button className="profile-edit-button" onClick={() => setEditOpen(true)}>Edit Profile <span>→</span></button>
         </section>
         <div className="profile-tabs" role="tablist" aria-label="Profile sections">
           {['My Skills', 'Learning', 'Reviews'].map((tab) => <button key={tab} role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>)}
@@ -1594,8 +1666,33 @@ function ProfileScreen({ settings, onBack, onSettings, onExplore, onPost, onMess
             <div><h2>{skill.name}</h2><p><span className={skill.mode === 'Teaching' ? 'teaching' : 'learning'}>{skill.mode}</span> <b>•</b> {skill.learners}</p></div>
             <span className="profile-skill-arrow">›</span>
           </article>)}
-        </section> : <div className="profile-empty-state">{activeTab === 'Learning' ? 'Learning goals will appear here.' : 'Reviews from your skill partners will appear here.'}</div>}
+        </section> : null}
+        {activeTab === 'Learning' ? <section className="profile-learning-list" aria-label="Learning progress">
+          {learning.map((item) => <article className="profile-learning-card" key={item.name}><div className="profile-learning-heading"><strong>{item.name}</strong><span>{item.progress}%</span></div><div className="profile-progress-track"><span style={{ width: `${item.progress}%` }} /></div><button type="button">Continue Learning <span>→</span></button></article>)}
+        </section> : null}
+        {activeTab === 'Reviews' ? <section className="profile-reviews-list" aria-label="Reviews">
+          <article className="profile-average-rating"><strong>4.8</strong><span>/ 5</span><div>★★★★★</div><small>Average rating</small></article>
+          {reviews.map((review) => <article className="profile-review-card" key={review.name}><div className="profile-review-avatar">{review.initials}</div><div><strong>{review.name}</strong><span className="profile-review-stars">{review.rating}</span><p>{review.comment}</p></div></article>)}
+        </section> : null}
       </main>
+
+      {editOpen ? <div className="profile-modal-backdrop" role="presentation"><section className="profile-modal" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title"><div className="profile-modal-heading"><h2 id="edit-profile-title">Edit Profile</h2><button type="button" aria-label="Close edit profile" onClick={() => setEditOpen(false)}>×</button></div><form onSubmit={saveProfile}>
+        <div className="profile-form-grid">
+          <label>Name<input name="name" value={profile.name || ''} onChange={onProfileChange} required /></label>
+          <label>Email<input type="email" name="email" value={profile.email || ''} onChange={onProfileChange} required /></label>
+          <label>Department<input name="department" value={profile.department || ''} onChange={onProfileChange} required /></label>
+          <label>Availability<input name="availability" value={profile.availability || ''} onChange={onProfileChange} required /></label>
+          <label>Skills Offered<textarea name="skillsOffered" rows="2" value={profile.skillsOffered || ''} onChange={onProfileChange} required /></label>
+          <label>Skills Wanted<textarea name="skillsWanted" rows="2" value={profile.skillsWanted || ''} onChange={onProfileChange} required /></label>
+          <label className="profile-form-wide">Bio / About Me<textarea name="bio" rows="3" value={profile.bio || ''} onChange={onProfileChange} placeholder="Tell the community about you..." /></label>
+        </div>
+        <div className="profile-modal-actions"><button type="button" className="profile-cancel-button" onClick={() => setEditOpen(false)}>Cancel</button><button type="submit" className="profile-save-button">Save Changes</button></div>
+      </form></section></div> : null}
+
+      {privacyOpen ? <div className="profile-modal-backdrop" role="presentation"><section className="profile-modal profile-small-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title"><div className="profile-modal-heading"><h2 id="privacy-title">Privacy &amp; Security</h2><button type="button" onClick={() => setPrivacyOpen(false)}>×</button></div><form onSubmit={(event) => { event.preventDefault(); setPrivacyOpen(false); setProfileToast('Privacy settings updated!'); }}><label className="profile-demo-password">Change Password<input type="password" placeholder="New password (demo)" /></label><label className="profile-toggle-row"><span>Two-factor Authentication</span><input type="checkbox" checked={twoFactorEnabled} onChange={(event) => setTwoFactorEnabled(event.target.checked)} /></label><label className="profile-toggle-row"><span>Keep Profile Public</span><input type="checkbox" checked={profilePublic} onChange={(event) => setProfilePublic(event.target.checked)} /></label><button type="button" className="profile-clear-button" onClick={() => { onClearNotifications(); setProfileToast('Notifications cleared.'); }}>Clear Notifications</button><div className="profile-modal-actions"><button type="button" className="profile-cancel-button" onClick={() => setPrivacyOpen(false)}>Cancel</button><button type="submit" className="profile-save-button">Save Security</button></div></form></section></div> : null}
+
+      {helpOpen ? <div className="profile-modal-backdrop" role="presentation"><section className="profile-modal profile-small-modal" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="profile-modal-heading"><h2 id="help-title">Help &amp; Support</h2><button type="button" onClick={() => setHelpOpen(false)}>×</button></div><p className="profile-help-copy">We are here to help with your SkillSwap experience.</p><a className="profile-support-email" href="mailto:support@skillswapai.com">support@skillswapai.com</a><div className="profile-help-actions"><button type="button" onClick={() => setProfileToast('WhatsApp demo opened.')}>WhatsApp</button><button type="button" onClick={() => setProfileToast('FAQ opened.')}>FAQ</button></div></section></div> : null}
+      {profileToast ? <div className="profile-success-toast" role="status">{profileToast}</div> : null}
       <ScreenBottomNav current="profile" onHome={onBack} onExplore={onExplore} onPost={onPost} onMessages={onMessages} onProfile={() => {}} />
     </div>
   );
