@@ -36,7 +36,6 @@ const exploreSkills = [
   { id: 'explore-english', user_id: 'zoe', user_name: 'Zoe Williams', name: 'English Speaking', category: 'Language', students: 143, description: 'Build confidence in conversation, presentations, vocabulary, and public speaking.', icon: 'Aa' },
 ];
 
-
 const demoRequests = [];
 
 const demoChats = [
@@ -77,44 +76,9 @@ const defaultProfile = {
 };
 
 const translations = {
-  English: {
-    about: "About",
-    settings: "Settings",
-    dashboard: "Dashboard",
-    logout: "Logout",
-    addSkill: "Add Skill",
-    mySkills: "My Skills",
-    communitySkills: "Community Skills",
-    swapRequests: "Swap Requests",
-    students: "Students",
-    notifications: "Notifications"
-  },
-
-  Gujarati: {
-    about: "અમારા વિશે",
-    settings: "સેટિંગ્સ",
-    dashboard: "ડેશબોર્ડ",
-    logout: "લોગઆઉટ",
-    addSkill: "સ્કિલ ઉમેરો",
-    mySkills: "મારી સ્કિલ્સ",
-    communitySkills: "કોમ્યુનિટી સ્કિલ્સ",
-    swapRequests: "સ્વેપ રિક્વેસ્ટ",
-    students: "વિદ્યાર્થીઓ",
-    notifications: "નોટિફિકેશન"
-  },
-
-  Hindi: {
-    about: "हमारे बारे में",
-    settings: "सेटिंग्स",
-    dashboard: "डैशबोर्ड",
-    logout: "लॉगआउट",
-    addSkill: "स्किल जोड़ें",
-    mySkills: "मेरी स्किल्स",
-    communitySkills: "कम्युनिटी स्किल्स",
-    swapRequests: "स्वैप रिक्वेस्ट",
-    students: "स्टूडेंट्स",
-    notifications: "नोटिफिकेशन"
-  }
+  English: { about: 'About', settings: 'Settings', dashboard: 'Dashboard', logout: 'Logout', addSkill: 'Add Skill', mySkills: 'My Skills', communitySkills: 'Community Skills', swapRequests: 'Swap Requests', students: 'Students', notifications: 'Notifications' },
+  Gujarati: { about: 'અમારા વિશે', settings: 'સેટિંગ્સ', dashboard: 'ડેશબોર્ડ', logout: 'લૉગઆઉટ', addSkill: 'સ્કિલ ઉમેરો', mySkills: 'મારી સ્કિલ્સ', communitySkills: 'કોમ્યુનિટી સ્કિલ્સ', swapRequests: 'સ્વેપ રિક્વેસ્ટ', students: 'વિદ્યાર્થીઓ', notifications: 'નોટિફિકેશન' },
+  Hindi: { about: 'हमारे बारे में', settings: 'सेटिंग्स', dashboard: 'डैशबोर्ड', logout: 'लॉगआउट', addSkill: 'स्किल जोड़ें', mySkills: 'मेरी स्किल्स', communitySkills: 'कम्युनिटी स्किल्स', swapRequests: 'स्वैप रिक्वेस्ट', students: 'स्टूडेंट्स', notifications: 'नोटिफिकेशन' },
 };
 
 function App() {
@@ -762,54 +726,14 @@ const profileCompletion =
 
   if (dashboardView === 'profile') {
     return (
-      <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
-       
-        <nav className="navbar dashboard-navbar shadow-sm">
-          <div className="container">
-            <a className="navbar-brand fw-bold" href="#">SkillSwap AI</a>
-            <div className="d-flex align-items-center gap-2">
-              <button className="btn profile-nav-button" onClick={() => setDashboardView('dashboard')}>Dashboard</button>
-              <button className="btn dashboard-logout" onClick={handleLogout}>Logout <span aria-hidden="true">→</span></button>
-            </div>
-          </div>
-        </nav>
-        <main className="container py-4 py-md-5 profile-page">
-          <div className="row justify-content-center">
-            <div className="col-xl-9">
-              <div className="profile-hero mb-4">
-                <div className="profile-avatar">{profile.name?.charAt(0).toUpperCase()}</div>
-                <div>
-                  <p className="skill-category mb-1">STUDENT PROFILE</p>
-                  <h1>{profile.name}</h1>
-                  <p className="mb-0">Shape your SkillSwap experience.</p>
-                </div>
-              </div>
-              <form onSubmit={handleProfileSave}>
-                <div className="card border-0 shadow-sm rounded-4">
-                  <div className="card-body p-4 p-md-5">
-                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-                      <div><h2 className="h4 mb-1">Profile details</h2><p className="text-muted small mb-0">Keep your student profile up to date.</p></div>
-                      <div className="d-flex align-items-center gap-2">
-                        {success ? <span className="profile-saved">Saved</span> : null}
-                        <button className="btn clear-requests-button" type="button" onClick={() => document.getElementById('profileName')?.focus()}>Edit Profile</button>
-                      </div>
-                    </div>
-                    <div className="row g-3">
-                      <div className="col-md-6"><label className="form-label" htmlFor="profileName">Student name</label><input id="profileName" className="form-control" name="name" value={profile.name} onChange={handleProfileChange} required /></div>
-                      <div className="col-md-6"><label className="form-label" htmlFor="profileEmail">Email</label><input id="profileEmail" type="email" className="form-control" name="email" value={profile.email} onChange={handleProfileChange} required /></div>
-                      <div className="col-md-6"><label className="form-label" htmlFor="profileDepartment">Department</label><input id="profileDepartment" className="form-control" name="department" value={profile.department} onChange={handleProfileChange} required /></div>
-                      <div className="col-md-6"><label className="form-label" htmlFor="profileAvailability">Availability</label><input id="profileAvailability" className="form-control" name="availability" value={profile.availability} onChange={handleProfileChange} required /></div>
-                      <div className="col-md-6"><label className="form-label" htmlFor="profileOffered">Skills offered</label><textarea id="profileOffered" className="form-control" rows="3" name="skillsOffered" value={profile.skillsOffered} onChange={handleProfileChange} required /></div>
-                      <div className="col-md-6"><label className="form-label" htmlFor="profileWanted">Skills wanted</label><textarea id="profileWanted" className="form-control" rows="3" name="skillsWanted" value={profile.skillsWanted} onChange={handleProfileChange} required /></div>
-                    </div>
-                    <div className="d-flex justify-content-end mt-4"><button className="btn auth-submit profile-save-button" type="submit">Save Changes <span aria-hidden="true">→</span></button></div>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </main>
-      </div>
+      <ProfileScreen
+        settings={settings}
+        onBack={() => setDashboardView('dashboard')}
+        onSettings={() => setDashboardView('settings')}
+        onExplore={() => setDashboardView('explore')}
+        onPost={() => setDashboardView('post')}
+        onMessages={() => setDashboardView('messages')}
+      />
     );
   }
   if (dashboardView === 'explore') {
@@ -957,75 +881,17 @@ const profileCompletion =
 }
   if (dashboardView === 'settings') {
   return (
-    <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
-      <nav className="navbar dashboard-navbar shadow-sm">
-        <div className="container">
-          <a className="navbar-brand fw-bold">SkillSwap AI</a>
-
-          <button
-            className="btn profile-nav-button"
-            onClick={() => setDashboardView('dashboard')}
-          >
-            ← Dashboard
-          </button>
-        </div>
-      </nav>
-
-      <main className="container py-5">
-        <div className="card border-0 shadow-sm rounded-4 p-4">
-          <h2 className="mb-4 text-center">⚙️ Settings</h2>
-
-          <div className="form-check form-switch mb-4">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              name="notifications"
-              checked={settings.notifications}
-              onChange={handleSettingsChange}
-            />
-            <label className="form-check-label ms-2">
-              Enable Notifications
-            </label>
-          </div>
-
-          <div className="mb-4">
-            <label className="form-label">Language</label>
-            <select
-              className="form-select"
-              name="language"
-              value={settings.language}
-              onChange={handleSettingsChange}
-            >
-              <option>English</option>
-              <option>Hindi</option>
-              <option>Gujarati</option>
-            </select>
-          </div>
-
-          <div className="form-check form-switch mb-4">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              name="darkMode"
-              checked={settings.darkMode}
-              onChange={handleSettingsChange}
-            />
-            <label className="form-check-label ms-2">
-              Dark Mode (Demo)
-            </label>
-          </div>
-
-          <div className="text-center">
-            <button
-              className="btn add-skill-button"
-              onClick={handleSettingsSave}
-            >
-              Save Settings
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
+      <SettingsScreen
+        settings={settings}
+        onBack={() => setDashboardView('profile')}
+        onSettingsChange={handleSettingsChange}
+        onLogout={handleLogout}
+        onHome={() => setDashboardView('dashboard')}
+        onExplore={() => setDashboardView('explore')}
+        onPost={() => setDashboardView('post')}
+        onMessages={() => setDashboardView('messages')}
+        onProfile={() => setDashboardView('profile')}
+      />
   );
 }
 
@@ -1678,14 +1544,130 @@ function DashboardHome({
 }
 
 function ScreenBottomNav({ current, onHome, onExplore, onPost, onMessages, onNotifications, onProfile }) {
+  const fourthIsNotifications = current === 'notifications';
   return (
     <nav className="dashboard-bottom-nav screen-bottom-nav">
       <button className={current === 'home' ? 'active' : ''} onClick={onHome}><span>⌂</span>Home</button>
       <button className={current === 'explore' ? 'active' : ''} onClick={onExplore}><span>◎</span>Explore</button>
       <button className={current === 'post' ? 'active' : ''} onClick={onPost}><span>＋</span>Post Skill</button>
-      <button className={current === 'notifications' ? 'active' : ''} onClick={onNotifications}><span>♢</span>Notifications</button>
+      <button className={fourthIsNotifications ? 'active' : ''} onClick={fourthIsNotifications ? onNotifications : onMessages}><span>{fourthIsNotifications ? '♢' : '◌'}</span>{fourthIsNotifications ? 'Notifications' : 'Messages'}</button>
       <button className={current === 'profile' ? 'active' : ''} onClick={onProfile}><span>●</span>Profile</button>
     </nav>
+  );
+}
+
+function ProfileScreen({ settings, onBack, onSettings, onExplore, onPost, onMessages }) {
+  const [activeTab, setActiveTab] = useState('My Skills');
+  const skills = [
+    { name: 'React Development', mode: 'Teaching', learners: '3 learners', icon: '</>', tone: 'violet' },
+    { name: 'UI/UX Design', mode: 'Learning', learners: '2 learners', icon: '✦', tone: 'blue' },
+    { name: 'Java Programming', mode: 'Teaching', learners: '1 learner', icon: 'J', tone: 'green' },
+    { name: 'Graphic Design', mode: 'Learning', learners: '1 learner', icon: '✎', tone: 'peach' },
+  ];
+
+  return (
+    <div className={`profile-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <header className="profile-screen-header">
+        <button className="profile-screen-icon" aria-label="Back to dashboard" onClick={onBack}>←</button>
+        <strong>SkillSwap AI</strong>
+        <button className="profile-screen-icon" aria-label="Open settings" onClick={onSettings}>☰</button>
+      </header>
+      <main className="profile-screen-content">
+        <section className="profile-summary">
+          <div className="profile-screen-avatar">IM</div>
+          <h1>Isha Malaviya</h1>
+          <p>B.Sc(IT) <span>•</span> 2nd Year</p>
+          <div className="profile-stats">
+            <div><strong>5</strong><span>Skills</span></div>
+            <div><strong>3</strong><span>Swaps</span></div>
+            <div><strong>12</strong><span>Followers</span></div>
+            <div><strong>8</strong><span>Following</span></div>
+          </div>
+          <button className="profile-edit-button" onClick={onSettings}>Edit Profile <span>→</span></button>
+        </section>
+        <div className="profile-tabs" role="tablist" aria-label="Profile sections">
+          {['My Skills', 'Learning', 'Reviews'].map((tab) => <button key={tab} role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>)}
+        </div>
+        {activeTab === 'My Skills' ? <section className="profile-skill-list" aria-label="My skills">
+          {skills.map((skill) => <article className="profile-skill-item" key={skill.name}>
+            <div className={`profile-skill-icon ${skill.tone}`}>{skill.icon}</div>
+            <div><h2>{skill.name}</h2><p><span className={skill.mode === 'Teaching' ? 'teaching' : 'learning'}>{skill.mode}</span> <b>•</b> {skill.learners}</p></div>
+            <span className="profile-skill-arrow">›</span>
+          </article>)}
+        </section> : <div className="profile-empty-state">{activeTab === 'Learning' ? 'Learning goals will appear here.' : 'Reviews from your skill partners will appear here.'}</div>}
+      </main>
+      <ScreenBottomNav current="profile" onHome={onBack} onExplore={onExplore} onPost={onPost} onMessages={onMessages} onProfile={() => {}} />
+    </div>
+  );
+}
+
+function SettingsScreen({ settings, onBack, onSettingsChange, onLogout, onHome, onExplore, onPost, onMessages, onProfile }) {
+  const [notificationsOn, setNotificationsOn] = useState(true);
+  const [darkModeOn, setDarkModeOn] = useState(true);
+  const rows = [
+    { label: 'Account', icon: '◯', type: 'link' },
+    { label: 'Notifications', icon: '♧', type: 'toggle', name: 'notifications', checked: notificationsOn, setChecked: setNotificationsOn },
+    { label: 'Dark Mode', icon: '◐', type: 'toggle', name: 'darkMode', checked: darkModeOn, setChecked: setDarkModeOn },
+    { label: 'Language', icon: '◎', detail: 'English', type: 'link' },
+    { label: 'Privacy & Security', icon: '▣', type: 'link' },
+    { label: 'Help & Support', icon: '?', type: 'link' },
+    { label: 'About', icon: 'ⓘ', type: 'link' },
+  ];
+
+  const handleToggle = (event, row) => {
+    row.setChecked(event.target.checked);
+    onSettingsChange(event);
+  };
+
+  return (
+    <div className="settings-screen">
+      <header className="settings-screen-header">
+        <button className="settings-back-button" aria-label="Back to profile" onClick={onBack}>←</button>
+        <h1>Settings</h1>
+        <span className="settings-header-spacer" aria-hidden="true" />
+      </header>
+      <main className="settings-screen-content">
+        <section className="settings-list" aria-label="Settings">
+          {rows.map((row) => <div className="settings-row" key={row.label}>
+            <span className="settings-row-icon" aria-hidden="true">{row.icon}</span>
+            <span className="settings-row-label">{row.label}</span>
+            {row.type === 'toggle' ? <label className="settings-toggle" aria-label={`${row.label} toggle`}>
+              <input type="checkbox" name={row.name} checked={row.checked} onChange={(event) => handleToggle(event, row)} />
+              <span />
+            </label> : <span className={`settings-row-action ${row.detail ? 'detail' : 'chevron'}`}>{row.detail || '›'}</span>}
+          </div>)}
+        </section>
+        <button className="settings-logout" onClick={onLogout}>Log Out</button>
+      </main>
+      <ScreenBottomNav current="profile" onHome={onHome} onExplore={onExplore} onPost={onPost} onMessages={onMessages} onProfile={onProfile} />
+    </div>
+  );
+}
+
+function AboutScreen({ settings, onBack, onHome, onExplore, onPost, onMessages, onProfile }) {
+  return (
+    <div className={`about-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <header className="about-screen-header">
+        <button className="about-back-button" aria-label="Back to dashboard" onClick={onBack}>←</button>
+        <h1>About</h1>
+        <span className="about-header-spacer" aria-hidden="true" />
+      </header>
+      <main className="about-screen-content">
+        <section className="about-brand" aria-label="About SkillSwap AI">
+          <div className="about-logo" aria-hidden="true"><span>✦</span></div>
+          <h2>SkillSwap AI</h2>
+          <p className="about-tagline">Learn <span>•</span> Share <span>•</span> Grow</p>
+        </section>
+        <p className="about-description">SkillSwap AI is a student-to-student<br />skill exchange platform that helps you<br />learn new skills, share your skills, and<br />grow together.</p>
+        <p className="about-version">Version 1.0.0</p>
+        <nav className="about-links" aria-label="About links">
+          <a href="#privacy">Privacy Policy <span>›</span></a>
+          <a href="#terms">Terms &amp; Conditions <span>›</span></a>
+          <a href="mailto:support@skillswap.ai">Contact Us <span>›</span></a>
+        </nav>
+      </main>
+      <ScreenBottomNav current="about" onHome={onHome} onExplore={onExplore} onPost={onPost} onMessages={onMessages} onProfile={onProfile} />
+    </div>
   );
 }
 
