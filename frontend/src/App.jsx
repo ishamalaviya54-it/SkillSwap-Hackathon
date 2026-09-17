@@ -102,9 +102,10 @@ function App() {
       ...defaultProfile,
       name: user?.name || defaultProfile.name,
       email: user?.email || defaultProfile.email,
+      profilePublic: true,
     };
   } catch {
-    return defaultProfile;
+    return { ...defaultProfile, profilePublic: true };
   }
 });
 
@@ -115,6 +116,27 @@ function App() {
       language: "English",
       darkMode: false,
     };
+  });
+  const [accountForm, setAccountForm] = useState(() => {
+    try {
+      const savedAccount = JSON.parse(localStorage.getItem('skillswap-account') || 'null');
+      return savedAccount || {
+        name: user?.name || defaultProfile.name,
+        email: user?.email || defaultProfile.email,
+        department: defaultProfile.department,
+        college: user?.college || 'JG University',
+        availability: defaultProfile.availability,
+      };
+    } catch {
+      return { name: defaultProfile.name, email: defaultProfile.email, department: defaultProfile.department, college: 'JG University', availability: defaultProfile.availability };
+    }
+  });
+  const [privacySettings, setPrivacySettings] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('skillswap-privacy-settings') || 'null') || { profilePublic: true, twoFactorEnabled: false };
+    } catch {
+      return { profilePublic: true, twoFactorEnabled: false };
+    }
   });
   const t = translations[settings.language];
   const [users, setUsers] = useState(demoStudents);
@@ -484,7 +506,10 @@ setSuccess(`Swap request ${status}!`);
 
   const handleProfileChange = (event) => {
     const { name, value } = event.target;
-    setProfile((previousProfile) => ({ ...previousProfile, [name]: value }));
+    setProfile((previousProfile) => ({
+      ...previousProfile,
+      [name]: name === 'profilePublic' ? value === 'true' : value,
+    }));
   };
 
   const handleSettingsChange = (e) => {
@@ -513,6 +538,8 @@ const handleSettingsSave = () => {
   }
 
   setSuccess("Settings saved successfully!");
+  setToastMessage("Settings saved successfully!");
+  setShowToast(true);
 };
 
 const handleProfileDarkModeToggle = () => {
@@ -526,6 +553,8 @@ const handleProfileDarkModeToggle = () => {
 const handleProfileSave = (event) => {
   event.preventDefault();
 
+  const savedProfile = JSON.parse(localStorage.getItem('skillswap-profile') || 'null');
+
   localStorage.setItem("skillswap-profile", JSON.stringify(profile));
 
   const updatedUser = {
@@ -536,7 +565,33 @@ const handleProfileSave = (event) => {
 
   localStorage.setItem("user", JSON.stringify(updatedUser));
   setUser(updatedUser);
-  setSuccess("Profile changes saved!");
+  setSuccess(savedProfile?.profilePublic !== profile.profilePublic
+    ? "Profile visibility updated successfully!"
+    : "Profile changes saved!");
+};
+
+const handleAccountSave = (event, nextAccount = accountForm) => {
+  event.preventDefault();
+  localStorage.setItem('skillswap-account', JSON.stringify(nextAccount));
+  setAccountForm(nextAccount);
+  setProfile((previousProfile) => ({ ...previousProfile, ...nextAccount }));
+  const updatedUser = { ...user, name: nextAccount.name, email: nextAccount.email, college: nextAccount.college };
+  setUser(updatedUser);
+  localStorage.setItem('user', JSON.stringify(updatedUser));
+  setToastMessage('Account details updated successfully!');
+  setShowToast(true);
+};
+
+const handlePrivacySave = (nextPrivacySettings) => {
+  setPrivacySettings(nextPrivacySettings);
+  localStorage.setItem('skillswap-privacy-settings', JSON.stringify(nextPrivacySettings));
+  setToastMessage('Privacy settings updated successfully!');
+  setShowToast(true);
+};
+
+const handleHelpAction = (message) => {
+  setToastMessage(message);
+  setShowToast(true);
 };
 
   const filteredCommunitySkills = skills.filter((skill) => {
@@ -739,6 +794,10 @@ const profileCompletion =
         settings={settings}
         onBack={() => setDashboardView('dashboard')}
         onSettings={() => setDashboardView('settings')}
+        onAccount={() => setDashboardView('account')}
+        onNotifications={() => setDashboardView('notifications')}
+        onPrivacy={() => setDashboardView('privacy')}
+        onHelp={() => setDashboardView('help')}
         onAbout={() => setDashboardView('about')}
         onLogout={handleLogout}
         onToggleDarkMode={handleProfileDarkModeToggle}
@@ -746,6 +805,7 @@ const profileCompletion =
         onExplore={() => setDashboardView('explore')}
         onPost={() => setDashboardView('post')}
         onMessages={() => setDashboardView('messages')}
+        onNavigate={setDashboardView}
         onProfileChange={handleProfileChange}
         onProfileSave={handleProfileSave}
         stats={{ skills: mySkills.length || 5, swaps: requests.filter((request) => request.status === 'Accepted').length || 3, followers: 12, following: 8 }}
@@ -763,8 +823,22 @@ const profileCompletion =
         skills={[...exploreSkills, ...postedSkills]}
         onSelectSkill={openExploreSkill}
         onBack={() => setDashboardView('dashboard')}
+        onNavigate={setDashboardView}
+        onLogout={handleLogout}
       />
     );
+  }
+
+  if (dashboardView === 'account') {
+    return <AccountScreen account={accountForm} onSave={handleAccountSave} onBack={() => setDashboardView('profile')} onHome={() => setDashboardView('dashboard')} onExplore={() => setDashboardView('explore')} onPost={() => setDashboardView('post')} onMessages={() => setDashboardView('messages')} onProfile={() => setDashboardView('profile')} onNavigate={setDashboardView} onLogout={handleLogout} settings={settings} showToast={showToast} toastMessage={toastMessage} />;
+  }
+
+  if (dashboardView === 'privacy') {
+    return <PrivacyScreen privacySettings={privacySettings} onSave={handlePrivacySave} onClearNotifications={() => { setNotifications([]); setShowNotifications(false); handleHelpAction('Notifications cleared.'); }} onBack={() => setDashboardView('profile')} onHome={() => setDashboardView('dashboard')} onExplore={() => setDashboardView('explore')} onPost={() => setDashboardView('post')} onMessages={() => setDashboardView('messages')} onProfile={() => setDashboardView('profile')} onNavigate={setDashboardView} onLogout={handleLogout} settings={settings} showToast={showToast} toastMessage={toastMessage} />;
+  }
+
+  if (dashboardView === 'help') {
+    return <HelpScreen onBack={() => setDashboardView('profile')} onHome={() => setDashboardView('dashboard')} onExplore={() => setDashboardView('explore')} onPost={() => setDashboardView('post')} onMessages={() => setDashboardView('messages')} onProfile={() => setDashboardView('profile')} onNavigate={setDashboardView} onLogout={handleLogout} onAction={handleHelpAction} settings={settings} showToast={showToast} toastMessage={toastMessage} />;
   }
 
   if (dashboardView === 'post') {
@@ -780,6 +854,8 @@ const profileCompletion =
         onExplore={() => setDashboardView('explore')}
         onMessages={() => setDashboardView('messages')}
         onProfile={() => setDashboardView('profile')}
+        onNavigate={setDashboardView}
+        onLogout={handleLogout}
       />
     );
   }
@@ -800,6 +876,8 @@ const profileCompletion =
         onExplore={() => setDashboardView('explore')}
         onPost={() => setDashboardView('post')}
         onProfile={() => setDashboardView('profile')}
+        onNavigate={setDashboardView}
+        onLogout={handleLogout}
       />
     );
   }
@@ -812,6 +890,8 @@ const profileCompletion =
         onExplore={() => setDashboardView('explore')}
         onPost={() => setDashboardView('post')}
         onProfile={() => setDashboardView('profile')}
+        onNavigate={setDashboardView}
+        onLogout={handleLogout}
       />
     );
   }
@@ -823,13 +903,16 @@ const profileCompletion =
         skill={selectedSkill}
         onBack={() => setDashboardView('explore')}
         onRequestSwap={handleExploreRequest}
+        onNavigate={setDashboardView}
+        onLogout={handleLogout}
       />
     );
   }
   if (dashboardView === 'about') {
     
   return (
-    <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
+    <div className={`min-vh-100 about-legacy-page ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
+      <AppSidebar current="about" onNavigate={setDashboardView} onLogout={handleLogout} />
       <nav className="navbar dashboard-navbar shadow-sm">
         <div className="container">
           <a className="navbar-brand fw-bold">SkillSwap AI</a>
@@ -899,14 +982,18 @@ const profileCompletion =
   return (
       <SettingsScreen
         settings={settings}
+        showToast={showToast}
+        toastMessage={toastMessage}
         onBack={() => setDashboardView('profile')}
         onSettingsChange={handleSettingsChange}
+        onSettingsSave={handleSettingsSave}
         onLogout={handleLogout}
         onHome={() => setDashboardView('dashboard')}
         onExplore={() => setDashboardView('explore')}
         onPost={() => setDashboardView('post')}
         onMessages={() => setDashboardView('messages')}
         onProfile={() => setDashboardView('profile')}
+        onNavigate={setDashboardView}
       />
   );
 }
@@ -945,6 +1032,7 @@ const profileCompletion =
         completedSwaps={completedSwaps}
         profileCompletion={profileCompletion}
         loading={loading}
+        handleLogout={handleLogout}
       />
     );
   }
@@ -1370,27 +1458,19 @@ const profileCompletion =
                       filteredStudents.map((member) => (
                         <div className="col-md-6" key={member.id}>
                         <article className="student-card h-100">
-                          <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                            <div>
-                              <p className="skill-category mb-1">{member.department}</p>
-                              <h6 className="mb-1">{member.name}</h6>
-                              <div className="student-college">{member.college || 'College not added'}</div>
+                          {member.profilePublic === false ? <div className="private-profile-state">🔒<strong>Private Profile</strong><small>This student's profile details are hidden.</small></div> : <>
+                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                              <div>
+                                <p className="skill-category mb-1">{member.department}</p>
+                                <h6 className="mb-1">{member.name}</h6>
+                                <div className="student-college">{member.college || 'College not added'}</div>
+                              </div>
+                              <span className="my-skills-count">{member.skills?.length || 0}</span>
                             </div>
-                            <span className="my-skills-count">{member.skills?.length || 0}</span>
-                          </div>
-
-                          <p className="student-detail-label mb-2">Offered skills</p>
-                          {member.skills && member.skills.length > 0 ? (
-                            <div className="d-flex flex-column gap-2">
-                              {member.skills.map((skill) => (
-                                <div key={skill.id} className="student-skill-row">
-                                  <span>{skill.name}</span>
-                                  <span>{skill.level}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : <div className="small">No skills listed yet.</div>}
-                          <div className="student-availability mt-3"><span aria-hidden="true">◷</span> {member.availability}</div>
+                            <p className="student-detail-label mb-2">Offered skills</p>
+                            {member.skills && member.skills.length > 0 ? <div className="d-flex flex-column gap-2">{member.skills.map((skill) => <div key={skill.id} className="student-skill-row"><span>{skill.name}</span><span>{skill.level}</span></div>)}</div> : <div className="small">No skills listed yet.</div>}
+                            <div className="student-availability mt-3"><span aria-hidden="true">◷</span> {member.availability}</div>
+                          </>}
                         </article>
                         </div>
                       ))
@@ -1439,6 +1519,7 @@ function DashboardHome({
   completedSwaps,
   profileCompletion,
   loading,
+  handleLogout,
 }) {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const addRecommendedSkill = (name, category, description) => {
@@ -1453,7 +1534,9 @@ function DashboardHome({
   return (
     <div className={`skillswap-dashboard ${settings.darkMode ? 'dark-theme' : ''}`}>
       {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
-      <header className="dashboard-hero">
+      <AppSidebar current="dashboard" onNavigate={setDashboardView} onLogout={handleLogout} />
+      <div className="dashboard-stage">
+        <header className="dashboard-hero">
         <div className="dashboard-hero-glow" aria-hidden="true" />
         <div className="container dashboard-hero-inner">
           <div>
@@ -1471,8 +1554,9 @@ function DashboardHome({
             <input type="search" placeholder="Search skills, people, or courses..." value={communitySearch} onChange={(event) => setCommunitySearch(event.target.value)} onFocus={() => scrollTo('community-skills')} />
           </div>
         </div>
-      </header>
+        </header>
 
+      <div className="dashboard-layout">
       <main className="container dashboard-content">
         <section className="skill-match-banner" onClick={() => scrollTo('community-skills')} role="button" tabIndex="0">
           <div>
@@ -1544,42 +1628,53 @@ function DashboardHome({
 
         <section className="dashboard-panel">
           <div className="dashboard-section-heading"><div><h2>{t.students}</h2><p>Meet students in the SkillSwap community.</p></div><div className="dashboard-inline-search compact"><span>⌕</span><input placeholder="Search students or skills" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></div></div>
-          <div className="student-grid">{filteredStudents.map((member) => <article className="student-dashboard-card" key={member.id}><span>{member.department}</span><h3>{member.name}</h3><p>{member.college || 'College not added'}</p><div>{member.skills?.map((skill) => <small key={skill.id}>{skill.name} · {skill.level}</small>)}</div><footer>◷ {member.availability}</footer></article>)}</div>
+          <div className="student-grid">{filteredStudents.map((member) => <article className="student-dashboard-card" key={member.id}>{member.profilePublic === false ? <div className="private-profile-state">🔒<strong>Private Profile</strong><small>This student's profile details are hidden.</small></div> : <><span>{member.department}</span><h3>{member.name}</h3><p>{member.college || 'College not added'}</p><div>{member.skills?.map((skill) => <small key={skill.id}>{skill.name} · {skill.level}</small>)}</div><footer>◷ {member.availability}</footer></>}</article>)}</div>
         </section>
       </main>
+      <aside className="dashboard-progress-panel">
+        <div className="progress-panel-heading"><span className="dashboard-kicker">YOUR PROGRESS</span><span>↗</span></div>
+        <div className="progress-ring"><strong>{profileCompletion}%</strong><span>complete</span></div>
+        <div className="progress-panel-stats"><div><strong>{mySkills.length + completedSwaps}</strong><span>Skills Learned</span></div><div><strong>{mySkills.length}</strong><span>Skills Taught</span></div><div><strong>{requests.length}</strong><span>Total Swaps</span></div></div>
+        <div className="progress-panel-actions"><h3>Quick Actions</h3><button onClick={() => setDashboardView('post')}><span>＋</span>Post a Skill <b>→</b></button><button onClick={() => setDashboardView('explore')}><span>◎</span>Find a Partner <b>→</b></button><button onClick={() => setDashboardView('messages')}><span>◌</span>View Messages <b>→</b></button></div>
+      </aside>
+      </div>
 
-      <nav className="dashboard-bottom-nav">
-        <button className="active"><span>⌂</span>Home</button>
-        <button onClick={() => setDashboardView('explore')}><span>◎</span>Explore</button>
-        <button onClick={() => setDashboardView('post')}><span>＋</span>Post Skill</button>
-        <button onClick={() => setDashboardView('messages')}><span>◌</span>Messages</button>
-        <button onClick={() => setDashboardView('profile')}><span>●</span>Profile</button>
-      </nav>
+      </div>
     </div>
   );
 }
 
-function ScreenBottomNav({ current, onHome, onExplore, onPost, onMessages, onNotifications, onProfile }) {
-  const fourthIsNotifications = current === 'notifications';
+function AppSidebar({ current, onNavigate, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const items = [
+    ['dashboard', '⌂', 'Home'],
+    ['explore', '◎', 'Explore'],
+    ['post', '＋', 'Post'],
+    ['messages', '◌', 'Messages'],
+    ['notifications', '♢', 'Notifications'],
+    ['profile', '●', 'Profile'],
+    ['settings', '⚙', 'Settings'],
+  ];
+
   return (
-    <nav className="dashboard-bottom-nav screen-bottom-nav">
-      <button className={current === 'home' ? 'active' : ''} onClick={onHome}><span>⌂</span>Home</button>
-      <button className={current === 'explore' ? 'active' : ''} onClick={onExplore}><span>◎</span>Explore</button>
-      <button className={current === 'post' ? 'active' : ''} onClick={onPost}><span>＋</span>Post Skill</button>
-      <button className={fourthIsNotifications ? 'active' : ''} onClick={fourthIsNotifications ? onNotifications : onMessages}><span>{fourthIsNotifications ? '♢' : '◌'}</span>{fourthIsNotifications ? 'Notifications' : 'Messages'}</button>
-      <button className={current === 'profile' ? 'active' : ''} onClick={onProfile}><span>●</span>Profile</button>
-    </nav>
+    <>
+      <button className="sidebar-menu-trigger" aria-label="Open navigation" aria-expanded={open} onClick={() => setOpen(true)}>☰</button>
+      {open ? <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setOpen(false)} /> : null}
+      <aside className={`app-sidebar ${open ? 'open' : ''}`}>
+        <div className="dashboard-sidebar-brand"><span>✦</span><strong>SkillSwap <em>AI</em></strong><button className="sidebar-close" aria-label="Close navigation" onClick={() => setOpen(false)}>×</button></div>
+        <nav className="dashboard-sidebar-nav" aria-label="Application navigation">
+          {items.map(([view, icon, label]) => <button key={view} className={current === view ? 'active' : ''} onClick={() => { onNavigate(view); setOpen(false); }}><span>{icon}</span>{label}</button>)}
+        </nav>
+        <button className="dashboard-sidebar-logout" onClick={onLogout}>↪ Log out</button>
+      </aside>
+    </>
   );
 }
 
-function ProfileScreen({ profile, settings, onBack, onSettings, onAbout, onLogout, onToggleDarkMode, onClearNotifications, onExplore, onPost, onMessages, onProfileChange, onProfileSave, stats }) {
+function ProfileScreen({ profile, settings, onBack, onSettings, onAccount, onNotifications, onPrivacy, onHelp, onAbout, onLogout, onToggleDarkMode, onExplore, onPost, onMessages, onProfileChange, onProfileSave, stats, onNavigate }) {
   const [activeTab, setActiveTab] = useState('My Skills');
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [profilePublic, setProfilePublic] = useState(true);
   const [profileToast, setProfileToast] = useState('');
   const menuRef = useRef(null);
   const skills = [
@@ -1632,14 +1727,15 @@ function ProfileScreen({ profile, settings, onBack, onSettings, onAbout, onLogou
         <button className="profile-screen-icon" aria-label="Back to dashboard" onClick={onBack}>←</button>
         <strong>SkillSwap AI</strong>
         <div className="profile-menu-wrap" ref={menuRef}>
-          <button className="profile-screen-icon" aria-label="Open profile menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>☰</button>
+          <button className="profile-screen-icon" aria-label="Open profile menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>⋮</button>
           {menuOpen ? <div className="profile-menu" role="menu">
             <button type="button" onClick={() => chooseMenuItem(onSettings)}>⚙️ Settings</button>
-            <button type="button" onClick={() => chooseMenuItem(onToggleDarkMode)}>🌙 Dark Mode</button>
-            <button type="button" onClick={() => chooseMenuItem(onSettings)}>🌐 Language</button>
+            <button type="button" onClick={() => chooseMenuItem(onAccount)}>👤 Account</button>
+            <button type="button" onClick={() => chooseMenuItem(onNotifications)}>🔔 Notifications</button>
+            <button type="button" onClick={() => chooseMenuItem(onPrivacy)}>🔒 Privacy &amp; Security</button>
+            <button type="button" onClick={() => chooseMenuItem(onHelp)}>❓ Help &amp; Support</button>
             <button type="button" onClick={() => chooseMenuItem(onAbout)}>ℹ️ About</button>
-            <button type="button" onClick={() => { setMenuOpen(false); setPrivacyOpen(true); }}>🔒 Privacy &amp; Security</button>
-            <button type="button" onClick={() => { setMenuOpen(false); setHelpOpen(true); }}>📞 Help &amp; Support</button>
+            <button type="button" onClick={() => chooseMenuItem(onToggleDarkMode)}>🌙 Dark Mode</button>
             <button type="button" onClick={() => chooseMenuItem(onLogout)}>🚪 Logout</button>
           </div> : null}
         </div>
@@ -1685,39 +1781,47 @@ function ProfileScreen({ profile, settings, onBack, onSettings, onAbout, onLogou
           <label>Skills Offered<textarea name="skillsOffered" rows="2" value={profile.skillsOffered || ''} onChange={onProfileChange} required /></label>
           <label>Skills Wanted<textarea name="skillsWanted" rows="2" value={profile.skillsWanted || ''} onChange={onProfileChange} required /></label>
           <label className="profile-form-wide">Bio / About Me<textarea name="bio" rows="3" value={profile.bio || ''} onChange={onProfileChange} placeholder="Tell the community about you..." /></label>
+          <fieldset className="profile-visibility-fieldset profile-form-wide">
+            <legend>Profile Visibility</legend>
+            <label className="profile-visibility-option">
+              <input type="radio" name="profilePublic" value="true" checked={profile.profilePublic !== false} onChange={onProfileChange} />
+              <span><strong>🌐 Public</strong><small>Your profile is visible to other students.</small></span>
+            </label>
+            <label className="profile-visibility-option">
+              <input type="radio" name="profilePublic" value="false" checked={profile.profilePublic === false} onChange={onProfileChange} />
+              <span><strong>🔒 Private</strong><small>Your full profile is hidden from other students.</small></span>
+            </label>
+          </fieldset>
         </div>
         <div className="profile-modal-actions"><button type="button" className="profile-cancel-button" onClick={() => setEditOpen(false)}>Cancel</button><button type="submit" className="profile-save-button">Save Changes</button></div>
       </form></section></div> : null}
 
-      {privacyOpen ? <div className="profile-modal-backdrop" role="presentation"><section className="profile-modal profile-small-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title"><div className="profile-modal-heading"><h2 id="privacy-title">Privacy &amp; Security</h2><button type="button" onClick={() => setPrivacyOpen(false)}>×</button></div><form onSubmit={(event) => { event.preventDefault(); setPrivacyOpen(false); setProfileToast('Privacy settings updated!'); }}><label className="profile-demo-password">Change Password<input type="password" placeholder="New password (demo)" /></label><label className="profile-toggle-row"><span>Two-factor Authentication</span><input type="checkbox" checked={twoFactorEnabled} onChange={(event) => setTwoFactorEnabled(event.target.checked)} /></label><label className="profile-toggle-row"><span>Keep Profile Public</span><input type="checkbox" checked={profilePublic} onChange={(event) => setProfilePublic(event.target.checked)} /></label><button type="button" className="profile-clear-button" onClick={() => { onClearNotifications(); setProfileToast('Notifications cleared.'); }}>Clear Notifications</button><div className="profile-modal-actions"><button type="button" className="profile-cancel-button" onClick={() => setPrivacyOpen(false)}>Cancel</button><button type="submit" className="profile-save-button">Save Security</button></div></form></section></div> : null}
-
-      {helpOpen ? <div className="profile-modal-backdrop" role="presentation"><section className="profile-modal profile-small-modal" role="dialog" aria-modal="true" aria-labelledby="help-title"><div className="profile-modal-heading"><h2 id="help-title">Help &amp; Support</h2><button type="button" onClick={() => setHelpOpen(false)}>×</button></div><p className="profile-help-copy">We are here to help with your SkillSwap experience.</p><a className="profile-support-email" href="mailto:support@skillswapai.com">support@skillswapai.com</a><div className="profile-help-actions"><button type="button" onClick={() => setProfileToast('WhatsApp demo opened.')}>WhatsApp</button><button type="button" onClick={() => setProfileToast('FAQ opened.')}>FAQ</button></div></section></div> : null}
       {profileToast ? <div className="profile-success-toast" role="status">{profileToast}</div> : null}
-      <ScreenBottomNav current="profile" onHome={onBack} onExplore={onExplore} onPost={onPost} onMessages={onMessages} onProfile={() => {}} />
+      <AppSidebar current="profile" onNavigate={onNavigate} onLogout={onLogout} />
     </div>
   );
 }
 
-function SettingsScreen({ settings, onBack, onSettingsChange, onLogout, onHome, onExplore, onPost, onMessages, onProfile }) {
-  const [notificationsOn, setNotificationsOn] = useState(true);
-  const [darkModeOn, setDarkModeOn] = useState(true);
+function SettingsScreen({ settings, showToast, toastMessage, onBack, onSettingsChange, onSettingsSave, onLogout, onHome, onExplore, onPost, onMessages, onProfile, onNavigate }) {
+  const [notificationsOn, setNotificationsOn] = useState(settings.notifications);
   const rows = [
     { label: 'Account', icon: '◯', type: 'link' },
     { label: 'Notifications', icon: '♧', type: 'toggle', name: 'notifications', checked: notificationsOn, setChecked: setNotificationsOn },
-    { label: 'Dark Mode', icon: '◐', type: 'toggle', name: 'darkMode', checked: darkModeOn, setChecked: setDarkModeOn },
-    { label: 'Language', icon: '◎', detail: 'English', type: 'link' },
+    { label: 'Language', icon: '◎', type: 'language' },
+    { label: 'Dark Mode', icon: '◐', type: 'toggle', name: 'darkMode', checked: settings.darkMode },
     { label: 'Privacy & Security', icon: '▣', type: 'link' },
     { label: 'Help & Support', icon: '?', type: 'link' },
     { label: 'About', icon: 'ⓘ', type: 'link' },
   ];
 
   const handleToggle = (event, row) => {
-    row.setChecked(event.target.checked);
+    if (row.setChecked) row.setChecked(event.target.checked);
     onSettingsChange(event);
   };
 
   return (
-    <div className="settings-screen">
+    <div className={`settings-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
+      {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
       <header className="settings-screen-header">
         <button className="settings-back-button" aria-label="Back to profile" onClick={onBack}>←</button>
         <h1>Settings</h1>
@@ -1731,17 +1835,79 @@ function SettingsScreen({ settings, onBack, onSettingsChange, onLogout, onHome, 
             {row.type === 'toggle' ? <label className="settings-toggle" aria-label={`${row.label} toggle`}>
               <input type="checkbox" name={row.name} checked={row.checked} onChange={(event) => handleToggle(event, row)} />
               <span />
-            </label> : <span className={`settings-row-action ${row.detail ? 'detail' : 'chevron'}`}>{row.detail || '›'}</span>}
+            </label> : row.type === 'language' ? <select className="settings-language-select" name="language" value={settings.language} onChange={onSettingsChange} aria-label="Language">
+              <option>English</option><option>Hindi</option><option>Gujarati</option>
+            </select> : <span className={`settings-row-action ${row.detail ? 'detail' : 'chevron'}`}>{row.detail || '›'}</span>}
           </div>)}
         </section>
+        <button className="settings-save-button" onClick={onSettingsSave}>Save Settings</button>
         <button className="settings-logout" onClick={onLogout}>Log Out</button>
       </main>
-      <ScreenBottomNav current="profile" onHome={onHome} onExplore={onExplore} onPost={onPost} onMessages={onMessages} onProfile={onProfile} />
+      <AppSidebar current="settings" onNavigate={onNavigate} onLogout={onLogout} />
     </div>
   );
 }
 
-function AboutScreen({ settings, onBack, onHome, onExplore, onPost, onMessages, onProfile }) {
+function AccountScreen({ account, onSave, onBack, onHome, onExplore, onPost, onMessages, onProfile, onNavigate, onLogout, settings, showToast, toastMessage }) {
+  const [editing, setEditing] = useState(false);
+  const [draftAccount, setDraftAccount] = useState(account);
+  useEffect(() => setDraftAccount(account), [account]);
+  const handleDraftChange = (event) => {
+    const { name, value } = event.target;
+    setDraftAccount((previousAccount) => ({ ...previousAccount, [name]: value }));
+  };
+
+  return (
+    <div className={`account-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
+      {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
+      <header className="account-screen-header"><button className="screen-icon-button" aria-label="Back to Profile" onClick={onBack}>←</button><h1>Account</h1><span className="settings-header-spacer" /></header>
+      <main className="account-screen-content">
+        <section className="account-hero"><div className="account-avatar">{draftAccount.name?.charAt(0).toUpperCase() || 'I'}</div><div><span className="dashboard-kicker">ACCOUNT INFORMATION</span><h2>{draftAccount.name}</h2><p>{draftAccount.email}</p></div></section>
+        <form className="account-card" onSubmit={(event) => { onSave(event, draftAccount); setEditing(false); }}>
+          <div className="account-card-heading"><div><span className="dashboard-kicker">YOUR DETAILS</span><h2>Personal information</h2></div><button type="button" className="outline-action" onClick={() => setEditing(true)}>Edit Account</button></div>
+          <div className="account-fields">
+            {['name', 'email', 'department', 'college', 'availability'].map((field) => <label key={field}>{field.charAt(0).toUpperCase() + field.slice(1)}<input type={field === 'email' ? 'email' : 'text'} name={field} value={draftAccount[field] || ''} onChange={handleDraftChange} disabled={!editing} required /></label>)}
+          </div>
+          <div className="account-status"><span>●</span><div><strong>Profile status</strong><small>Active SkillSwap member</small></div></div>
+          {editing ? <div className="account-actions"><button type="button" className="profile-cancel-button" onClick={() => { setDraftAccount(account); setEditing(false); }}>Cancel</button><button type="submit" className="profile-save-button">Save Account</button></div> : null}
+        </form>
+      </main>
+      <AppSidebar current="profile" onNavigate={onNavigate} onLogout={onLogout} />
+    </div>
+  );
+}
+
+function PrivacyScreen({ privacySettings, onSave, onClearNotifications, onBack, onHome, onExplore, onPost, onMessages, onProfile, onNavigate, onLogout, settings, showToast, toastMessage }) {
+  return (
+    <div className={`privacy-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
+      {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
+      <header className="settings-screen-header"><button className="settings-back-button" aria-label="Back to Profile" onClick={onBack}>←</button><h1>Privacy &amp; Security</h1><span className="settings-header-spacer" /></header>
+      <main className="settings-screen-content">
+        <section className="settings-list privacy-settings-list">
+          <label className="privacy-control"><span><strong>Keep Profile Public</strong><small>Let other students discover your profile.</small></span><input type="checkbox" checked={privacySettings.profilePublic} onChange={(event) => onSave({ ...privacySettings, profilePublic: event.target.checked })} /><i /></label>
+          <label className="privacy-control"><span><strong>Two-Factor Authentication</strong><small>Add an extra layer of account security.</small></span><input type="checkbox" checked={privacySettings.twoFactorEnabled} onChange={(event) => onSave({ ...privacySettings, twoFactorEnabled: event.target.checked })} /><i /></label>
+        </section>
+        <button className="settings-danger-action" onClick={onClearNotifications}>Clear Notifications</button>
+      </main>
+      <AppSidebar current="profile" onNavigate={onNavigate} onLogout={onLogout} />
+    </div>
+  );
+}
+
+function HelpScreen({ onBack, onHome, onExplore, onPost, onMessages, onProfile, onNavigate, onLogout, onAction, settings, showToast, toastMessage }) {
+  return (
+    <div className={`help-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
+      {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
+      <header className="settings-screen-header"><button className="settings-back-button" aria-label="Back to Profile" onClick={onBack}>←</button><h1>Help &amp; Support</h1><span className="settings-header-spacer" /></header>
+      <main className="settings-screen-content">
+        <section className="help-card"><div className="help-card-icon">?</div><h2>How can we help?</h2><p>Find answers or contact the SkillSwap AI support team.</p><button onClick={() => onAction('FAQ opened successfully.')}>FAQ <span>→</span></button><button onClick={() => onAction('Contact Support demo opened.')}>Contact Support <span>→</span></button><button onClick={() => onAction('Problem report opened.')}>Report a Problem <span>→</span></button></section>
+      </main>
+      <AppSidebar current="profile" onNavigate={onNavigate} onLogout={onLogout} />
+    </div>
+  );
+}
+
+function AboutScreen({ settings, onBack, onHome, onExplore, onPost, onMessages, onProfile, onNavigate, onLogout }) {
   return (
     <div className={`about-screen ${settings.darkMode ? 'dark-theme' : ''}`}>
       <header className="about-screen-header">
@@ -1763,12 +1929,12 @@ function AboutScreen({ settings, onBack, onHome, onExplore, onPost, onMessages, 
           <a href="mailto:support@skillswap.ai">Contact Us <span>›</span></a>
         </nav>
       </main>
-      <ScreenBottomNav current="about" onHome={onHome} onExplore={onExplore} onPost={onPost} onMessages={onMessages} onProfile={onProfile} />
+      <AppSidebar current="about" onNavigate={onNavigate} onLogout={onLogout} />
     </div>
   );
 }
 
-function PostSkillScreen({ settings, form, onChange, onModeChange, onImageChange, onSubmit, onBack, onExplore, onMessages, onProfile }) {
+function PostSkillScreen({ settings, form, onChange, onModeChange, onImageChange, onSubmit, onBack, onExplore, onMessages, onProfile, onNavigate, onLogout }) {
   return (
     <div className={`post-skill-page ${settings.darkMode ? 'dark-theme' : ''}`}>
       <header className="post-skill-header"><div className="container post-skill-header-inner"><button className="screen-icon-button" aria-label="Back to dashboard" onClick={onBack}>←</button><div><span className="dashboard-kicker">SKILLSWAP AI</span><h1>Post Your Skill</h1></div><span className="post-header-mark">✦</span></div></header>
@@ -1784,12 +1950,12 @@ function PostSkillScreen({ settings, form, onChange, onModeChange, onImageChange
           <button className="post-submit-button" type="submit">Post Skill <span>→</span></button>
         </form>
       </main>
-      <ScreenBottomNav current="post" onHome={onBack} onExplore={onExplore} onPost={() => {}} onNotifications={() => {}} onProfile={onProfile} />
+      <AppSidebar current="post" onNavigate={onNavigate} onLogout={onLogout} />
     </div>
   );
 }
 
-function MessagesScreen({ settings, chats, selectedChatId, setSelectedChatId, search, setSearch, draft, setDraft, onSend, onBack, onExplore, onPost, onProfile }) {
+function MessagesScreen({ settings, chats, selectedChatId, setSelectedChatId, search, setSearch, draft, setDraft, onSend, onBack, onExplore, onPost, onProfile, onNavigate, onLogout }) {
   const messageEndRef = useRef(null);
   const selectedChat = chats.find((chat) => chat.id === selectedChatId);
   const filteredChats = chats.filter((chat) => chat.name.toLowerCase().includes(search.trim().toLowerCase()));
@@ -1805,12 +1971,12 @@ function MessagesScreen({ settings, chats, selectedChatId, setSelectedChatId, se
         <section className="chat-list-panel"><div className="messages-search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chats..." /></div><div className="chat-list">{filteredChats.map((chat) => <button className={`chat-list-item ${selectedChatId === chat.id ? 'active' : ''}`} key={chat.id} onClick={() => setSelectedChatId(chat.id)}><span className="chat-avatar">{chat.avatar}</span><span className="chat-list-copy"><strong>{chat.name}</strong><small>{chat.lastMessage}</small></span><time>{chat.time}</time></button>)}</div></section>
         {selectedChat ? <section className="chat-window"><div className="chat-window-header"><button className="chat-back-button" onClick={() => setSelectedChatId(null)}>←</button><span className="chat-avatar">{selectedChat.avatar}</span><div><strong>{selectedChat.name}</strong><small>SkillSwap partner</small></div></div><div className="chat-messages">{selectedChat.messages.map((message) => <div className={`chat-bubble-row ${message.from === 'me' ? 'mine' : ''}`} key={message.id}><div className="chat-bubble"><p>{message.text}</p><time>{message.time}</time></div></div>)}<div ref={messageEndRef} /></div><form className="chat-compose" onSubmit={onSend}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message..." aria-label="Message" /><button type="submit" aria-label="Send message">↑</button></form></section> : <section className="chat-empty"><span>◌</span><h2>Select a chat</h2><p>Choose a SkillSwap partner to start messaging.</p></section>}
       </main>
-      <ScreenBottomNav current="messages" onHome={onBack} onExplore={onExplore} onPost={onPost} onNotifications={() => {}} onProfile={onProfile} />
+      <AppSidebar current="messages" onNavigate={onNavigate} onLogout={onLogout} />
     </div>
   );
 }
 
-function NotificationsScreen({ settings, onBack, onExplore, onPost, onProfile }) {
+function NotificationsScreen({ settings, onBack, onExplore, onPost, onProfile, onNavigate, onLogout }) {
   const [filter, setFilter] = useState('All');
   const filters = ['All', 'Swap Requests', 'Messages', 'System'];
   const items = [
@@ -1850,12 +2016,12 @@ function NotificationsScreen({ settings, onBack, onExplore, onPost, onProfile })
           {!visibleItems.length ? <div className="notification-empty">No notifications in this view.</div> : null}
         </section>
       </main>
-      <ScreenBottomNav current="notifications" onHome={onBack} onExplore={onExplore} onPost={onPost} onNotifications={() => {}} onProfile={onProfile} />
+      <AppSidebar current="notifications" onNavigate={onNavigate} onLogout={onLogout} />
     </div>
   );
 }
 
-function ExploreSkillsScreen({ settings, search, setSearch, category, setCategory, skills, onSelectSkill, onBack }) {
+function ExploreSkillsScreen({ settings, search, setSearch, category, setCategory, skills, onSelectSkill, onBack, onNavigate, onLogout }) {
   const categories = ['All', 'Technical', 'Creative', 'Language'];
   const filteredSkills = skills.filter((skill) => {
     const matchesCategory = category === 'All' || skill.category === category;
@@ -1866,6 +2032,7 @@ function ExploreSkillsScreen({ settings, search, setSearch, category, setCategor
 
   return (
     <div className={`skill-explore-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <AppSidebar current="explore" onNavigate={onNavigate} onLogout={onLogout} />
       <header className="skill-explore-header">
         <div className="container skill-explore-header-inner">
           <button className="screen-icon-button" aria-label="Back to dashboard" onClick={onBack}>←</button>
@@ -1894,7 +2061,7 @@ function ExploreSkillsScreen({ settings, search, setSearch, category, setCategor
   );
 }
 
-function SkillDetailsScreen({ settings, skill, onBack, onRequestSwap }) {
+function SkillDetailsScreen({ settings, skill, onBack, onRequestSwap, onNavigate, onLogout }) {
   if (!skill) return null;
   const learnItems = skill.category === 'Technical'
     ? ['Practical foundations and best practices', 'Build a project with guided feedback', 'Confidence using industry tools']
@@ -1911,6 +2078,7 @@ function SkillDetailsScreen({ settings, skill, onBack, onRequestSwap }) {
 
   return (
     <div className={`skill-details-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <AppSidebar current="explore" onNavigate={onNavigate} onLogout={onLogout} />
       <header className="skill-details-header"><div className="container skill-details-actions"><button className="screen-icon-button" aria-label="Back to Explore" onClick={onBack}>←</button><button className="screen-icon-button" aria-label="Share skill" onClick={shareSkill}>↗</button></div></header>
       <main className="container skill-details-content">
         <div className="skill-details-identity"><div className="skill-details-avatar">{skill.icon}</div><div><span className="explore-category-label">{skill.category}</span><h1>{skill.name}</h1><p>◉ {skill.students} students learning this skill</p></div></div>
