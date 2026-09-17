@@ -305,6 +305,40 @@ button, a { transition: all 0.2s ease; }
 @media (max-width: 767.98px) { .explore-skill-grid { grid-template-columns: 1fr; } }
 @media (max-width: 575.98px) { .skill-explore-header-inner, .skill-details-actions { padding-right: 14px; padding-left: 14px; } .skill-explore-content { padding-right: 14px; padding-left: 14px; } .skill-details-content { padding-right: 14px; padding-left: 14px; } .explore-skill-card p { min-height: auto; } }
 
+/* Notifications screen */
+.notifications-page { min-height: 100vh; padding-bottom: 92px; color: #242542; background: #fff; }
+.notifications-header { color: #fff; background: linear-gradient(115deg, #4f32bd, #536eea); }
+.notifications-header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 76px; padding-top: .75rem; padding-bottom: .75rem; }
+.notifications-header h1 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -.035em; }
+.notifications-back { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; color: #fff; background: rgba(255,255,255,.13); font-size: 1.35rem; line-height: 1; }
+.notifications-header-dot { width: 9px; height: 9px; border-radius: 50%; background: #bde4ff; box-shadow: 0 0 0 5px rgba(189,228,255,.14); }
+.notifications-content { padding-top: 1.35rem; }
+.notification-tabs { display: flex; gap: .35rem; overflow-x: auto; padding: .25rem; border: 1px solid #ececf5; border-radius: 15px; background: #f8f8fc; scrollbar-width: none; }
+.notification-tabs::-webkit-scrollbar { display: none; }
+.notification-tabs button { min-height: 37px; padding: .45rem .85rem; border: 0; border-radius: 10px; color: #85879c; background: transparent; font-size: .72rem; font-weight: 800; white-space: nowrap; }
+.notification-tabs button.active { color: #fff; background: #5c51d9; box-shadow: 0 6px 12px rgba(92,81,217,.2); }
+.notification-list { margin-top: 1.2rem; border-top: 1px solid #eeedf4; }
+.notification-card { position: relative; display: flex; align-items: flex-start; gap: .8rem; min-height: 92px; padding: 1.05rem .2rem; border-bottom: 1px solid #eeedf4; }
+.notification-card.unread { background: linear-gradient(90deg, #fbfaff, #fff); }
+.notification-avatar { display: grid; place-items: center; flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; color: #fff; background: #6354d8; font-size: .78rem; font-weight: 800; }
+.notification-avatar.comment { color: #1f6eb5; background: #dff1ff; }
+.notification-avatar.system { color: #fff; background: linear-gradient(135deg, #5b45cd, #398de5); font-size: 1.15rem; }
+.notification-avatar.message { color: #20745e; background: #daf6ea; }
+.notification-copy { min-width: 0; padding-right: 2rem; }
+.notification-copy p { margin: .05rem 0 .35rem; color: #494b67; font-size: .82rem; line-height: 1.4; }
+.notification-copy strong { color: #252648; font-weight: 800; }
+.notification-skill { display: block; color: #6c4cf5; font-size: .73rem; font-weight: 750; }
+.notification-copy small { display: none; }
+.notification-card time { margin-left: auto; color: #9a9bad; font-size: .7rem; white-space: nowrap; }
+.notification-unread { position: absolute; top: 1.45rem; right: .1rem; width: 7px; height: 7px; border-radius: 50%; background: #5d4bda; box-shadow: 0 0 0 4px #efedff; }
+.notification-empty { padding: 3rem 1rem; color: #898b9f; font-size: .82rem; text-align: center; }
+.dark-theme.notifications-page { color: #fff; background: #121225; }
+.dark-theme .notification-tabs { border-color: #30304d; background: #1e1e34; }
+.dark-theme .notification-list, .dark-theme .notification-card { border-color: #30304d; }
+.dark-theme .notification-card.unread { background: #1a1930; }
+.dark-theme .notification-copy p, .dark-theme .notification-card time { color: #bbbcd0; }
+.dark-theme .notification-copy strong { color: #fff; }
+
 /* Post Skill and Messages screens */
 .post-skill-page, .messages-page { min-height: 100vh; padding-bottom: 100px; color: #242542; background: #f7f8fc; }
 .post-skill-header, .messages-header { color: #fff; background: linear-gradient(120deg, #342080, #6c4cf5 55%, #3989ed); }

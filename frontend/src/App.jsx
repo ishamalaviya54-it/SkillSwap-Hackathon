@@ -864,6 +864,18 @@ const profileCompletion =
     );
   }
 
+  if (dashboardView === 'notifications') {
+    return (
+      <NotificationsScreen
+        settings={settings}
+        onBack={() => setDashboardView('dashboard')}
+        onExplore={() => setDashboardView('explore')}
+        onPost={() => setDashboardView('post')}
+        onProfile={() => setDashboardView('profile')}
+      />
+    );
+  }
+
   if (dashboardView === 'skillDetails') {
     return (
       <SkillDetailsScreen
@@ -1595,7 +1607,7 @@ function DashboardHome({
           <div className="quick-actions-grid">
             <button className="quick-action" onClick={() => setDashboardView('explore')}><span>⌕</span><strong>Browse</strong></button>
             <button className="quick-action" onClick={() => scrollTo('my-skills')}><span>▦</span><strong>My Skills</strong></button>
-            <button className="quick-action" onClick={() => setShowNotifications(!showNotifications)}><span>♢</span><strong>Notifications</strong></button>
+            <button className="quick-action" onClick={() => setDashboardView('notifications')}><span>♢</span><strong>Notifications</strong></button>
             <button className="quick-action" onClick={() => setDashboardView('profile')}><span>●</span><strong>Profile</strong></button>
           </div>
           {showNotifications && settings.notifications ? <div className="dashboard-notifications">
@@ -1665,13 +1677,13 @@ function DashboardHome({
   );
 }
 
-function ScreenBottomNav({ current, onHome, onExplore, onPost, onMessages, onProfile }) {
+function ScreenBottomNav({ current, onHome, onExplore, onPost, onMessages, onNotifications, onProfile }) {
   return (
     <nav className="dashboard-bottom-nav screen-bottom-nav">
       <button className={current === 'home' ? 'active' : ''} onClick={onHome}><span>⌂</span>Home</button>
       <button className={current === 'explore' ? 'active' : ''} onClick={onExplore}><span>◎</span>Explore</button>
       <button className={current === 'post' ? 'active' : ''} onClick={onPost}><span>＋</span>Post Skill</button>
-      <button className={current === 'messages' ? 'active' : ''} onClick={onMessages}><span>◌</span>Messages</button>
+      <button className={current === 'notifications' ? 'active' : ''} onClick={onNotifications}><span>♢</span>Notifications</button>
       <button className={current === 'profile' ? 'active' : ''} onClick={onProfile}><span>●</span>Profile</button>
     </nav>
   );
@@ -1693,7 +1705,7 @@ function PostSkillScreen({ settings, form, onChange, onModeChange, onImageChange
           <button className="post-submit-button" type="submit">Post Skill <span>→</span></button>
         </form>
       </main>
-      <ScreenBottomNav current="post" onHome={onBack} onExplore={onExplore} onPost={() => {}} onMessages={onMessages} onProfile={onProfile} />
+      <ScreenBottomNav current="post" onHome={onBack} onExplore={onExplore} onPost={() => {}} onNotifications={() => {}} onProfile={onProfile} />
     </div>
   );
 }
@@ -1714,7 +1726,52 @@ function MessagesScreen({ settings, chats, selectedChatId, setSelectedChatId, se
         <section className="chat-list-panel"><div className="messages-search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chats..." /></div><div className="chat-list">{filteredChats.map((chat) => <button className={`chat-list-item ${selectedChatId === chat.id ? 'active' : ''}`} key={chat.id} onClick={() => setSelectedChatId(chat.id)}><span className="chat-avatar">{chat.avatar}</span><span className="chat-list-copy"><strong>{chat.name}</strong><small>{chat.lastMessage}</small></span><time>{chat.time}</time></button>)}</div></section>
         {selectedChat ? <section className="chat-window"><div className="chat-window-header"><button className="chat-back-button" onClick={() => setSelectedChatId(null)}>←</button><span className="chat-avatar">{selectedChat.avatar}</span><div><strong>{selectedChat.name}</strong><small>SkillSwap partner</small></div></div><div className="chat-messages">{selectedChat.messages.map((message) => <div className={`chat-bubble-row ${message.from === 'me' ? 'mine' : ''}`} key={message.id}><div className="chat-bubble"><p>{message.text}</p><time>{message.time}</time></div></div>)}<div ref={messageEndRef} /></div><form className="chat-compose" onSubmit={onSend}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message..." aria-label="Message" /><button type="submit" aria-label="Send message">↑</button></form></section> : <section className="chat-empty"><span>◌</span><h2>Select a chat</h2><p>Choose a SkillSwap partner to start messaging.</p></section>}
       </main>
-      <ScreenBottomNav current="messages" onHome={onBack} onExplore={onExplore} onPost={onPost} onMessages={() => {}} onProfile={onProfile} />
+      <ScreenBottomNav current="messages" onHome={onBack} onExplore={onExplore} onPost={onPost} onNotifications={() => {}} onProfile={onProfile} />
+    </div>
+  );
+}
+
+function NotificationsScreen({ settings, onBack, onExplore, onPost, onProfile }) {
+  const [filter, setFilter] = useState('All');
+  const filters = ['All', 'Swap Requests', 'Messages', 'System'];
+  const items = [
+    { id: 1, filter: 'All', kind: 'like', initials: 'AP', name: 'Aarav Patel', action: 'liked your post', skill: 'UI/UX Design', time: '15m', unread: true },
+    { id: 2, filter: 'All', kind: 'comment', initials: 'NS', name: 'Neha Soni', action: 'commented on your post', skill: 'Python Programming', time: '1h', unread: true },
+    { id: 3, filter: 'System', kind: 'system', initials: '✦', name: 'System Update', action: 'New feature: AI Skill Match', time: '2h', unread: false },
+    { id: 4, filter: 'Messages', kind: 'message', initials: 'PD', name: 'Pooja Desai', action: 'sent a message', skill: 'English Speaking', time: '3h', unread: false },
+  ];
+  const visibleItems = filter === 'All' ? items : items.filter((item) => item.filter === filter);
+
+  return (
+    <div className={`notifications-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <header className="notifications-header">
+        <div className="container notifications-header-inner">
+          <button className="notifications-back" aria-label="Back to dashboard" onClick={onBack}>←</button>
+          <h1>Notifications</h1>
+          <span className="notifications-header-dot" aria-hidden="true" />
+        </div>
+      </header>
+      <main className="container notifications-content">
+        <div className="notification-tabs" role="tablist" aria-label="Notification filters">
+          {filters.map((item) => <button key={item} role="tab" aria-selected={filter === item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}</button>)}
+        </div>
+        <section className="notification-list" aria-label={`${filter} notifications`}>
+          {visibleItems.map((item) => (
+            <article className={`notification-card ${item.unread ? 'unread' : ''}`} key={item.id}>
+              <div className={`notification-avatar ${item.kind}`}>{item.initials}</div>
+              <div className="notification-copy">
+                <p><strong>{item.name}</strong> {item.action}</p>
+                {item.skill ? <span className="notification-skill">Skill: {item.skill}</span> : null}
+                <small>{item.kind === 'system' ? item.action : item.skill}</small>
+              </div>
+              <time>{item.time}</time>
+              {item.unread ? <span className="notification-unread" aria-label="Unread" /> : null}
+            </article>
+          ))}
+          {!visibleItems.length ? <div className="notification-empty">No notifications in this view.</div> : null}
+        </section>
+      </main>
+      <ScreenBottomNav current="notifications" onHome={onBack} onExplore={onExplore} onPost={onPost} onNotifications={() => {}} onProfile={onProfile} />
     </div>
   );
 }
