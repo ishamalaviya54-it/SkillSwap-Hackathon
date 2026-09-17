@@ -267,3 +267,33 @@ button, a { transition: all 0.2s ease; }
   background: #1f1f1f;
   color: white;
 }
+.splash-screen{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:linear-gradient(135deg,#6f42c1,#8e44ad);
+  color:white;
+}
+
+.splash-screen h1{
+  font-size:48px;
+  font-weight:bold;
+}
+
+.splash-screen p{
+  font-size:20px;
+}
+.google-btn {
+  border: 1px solid #dcdcdc;
+  border-radius: 12px;
+  background: white;
+  padding: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.google-btn:hover {
+  background: #f8f9fa;
+}

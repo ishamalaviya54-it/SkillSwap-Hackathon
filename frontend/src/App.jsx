@@ -50,6 +50,7 @@ const defaultProfile = {
   skillsWanted: 'UI/UX, Python',
   availability: 'Weekday evenings',
 };
+
 const translations = {
   English: {
     about: "About",
@@ -95,6 +96,14 @@ function App() {
   const [authMode, setAuthMode] = useState('login');
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
+  const [showSplash, setShowSplash] = useState(true);
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    setShowSplash(false);
+  }, 2500);
+
+  return () => clearTimeout(timer);
+}, []);
   const [dashboardView, setDashboardView] = useState('dashboard');
   const [profile, setProfile] = useState(() => {
   try {
@@ -126,6 +135,7 @@ function App() {
   const [mySkills, setMySkills] = useState(() => JSON.parse(localStorage.getItem('skillswap-my-skills') || '[]'));
   const [studentSearch, setStudentSearch] = useState('');
   const [communitySearch, setCommunitySearch] = useState('');
+  const [selectedSkill, setSelectedSkill] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -318,23 +328,29 @@ function App() {
         localStorage.setItem('skillswap-swap-requests', JSON.stringify(updatedRequests));
         return updatedRequests;
       });
-      setSuccess('Demo swap request sent!');
-      setToastMessage(`Swap request sent to ${selectedSkill.user_name}! 🎉`);
-setShowToast(true);
+      setSuccess("Demo swap request sent!");
 
-setTimeout(() => {
-  setShowToast(false);
-}, 3000);
-      if (settings.notifications) {
+if (settings.notifications) {
+  setToastMessage(`Swap request sent to ${selectedSkill.user_name}! 🎉`);
+  setShowToast(true);
+}
+if (settings.notifications) {
   setNotifications((prev) => [
     {
       id: Date.now(),
-      text: `🔄 Swap request sent to ${selectedSkill.user_name} for ${selectedSkill.name}.`,
+      text: `📩 Swap request sent to ${selectedSkill.user_name} for ${selectedSkill.name}.`,
       read: false,
     },
     ...prev,
   ]);
+
+  setShowNotifications(true);   // ⭐ AA LINE ADD KARO
 }
+
+setTimeout(() => {
+  setShowToast(false);
+}, 3000);
+      
       setLoading(false);
       return;
     }
@@ -371,21 +387,21 @@ setTimeout(() => {
     JSON.stringify(updatedRequests)
   );
 
+  if (settings.notifications) {
   setToastMessage(`🎉 Swap request ${status}!`);
   setShowToast(true);
 
-  if (settings.notifications) {
-    setNotifications((prev) => [
-      {
-        id: Date.now(),
-        text: `🎉 Swap request ${status}!`,
-        read: false,
-      },
-      ...prev,
-    ]);
-  }
+  setNotifications((prev) => [
+    {
+      id: Date.now(),
+      text: `🎉 Swap request ${status}!`,
+      read: false,
+    },
+    ...prev,
+  ]);
+}
 
-  setSuccess(`Swap request ${status}!`);
+setSuccess(`Swap request ${status}!`);
 };
 
   const handleClearSwapRequests = () => {
@@ -406,10 +422,18 @@ setTimeout(() => {
   const handleSettingsChange = (e) => {
   const { name, value, checked, type } = e.target;
 
-  setSettings((prev) => ({
-    ...prev,
+  const newSettings = {
+    ...settings,
     [name]: type === "checkbox" ? checked : value,
-  }));
+  };
+
+  setSettings(newSettings);
+
+  // Notifications OFF thai to bell bandh ane list clear
+  if (name === "notifications" && checked === false) {
+    setShowNotifications(false);
+    setNotifications([]);
+  }
 };
 
 const handleSettingsSave = () => {
@@ -417,6 +441,7 @@ const handleSettingsSave = () => {
 
   if (!settings.notifications) {
     setShowNotifications(false);
+    setNotifications([]);
   }
 
   setSuccess("Settings saved successfully!");
@@ -491,7 +516,16 @@ const profileCompletion =
     setError('');
     setSuccess('');
   };
-
+  if (showSplash) {
+  return (
+    <div className="splash-screen d-flex justify-content-center align-items-center">
+      <div className="text-center">
+        <h1 className="fw-bold text-white">💜 SkillSwap AI</h1>
+        <p className="text-white">Learn • Teach • Swap Skills</p>
+      </div>
+    </div>
+  );
+}
   if (!token || !user) {
     return (
       <main className="auth-page">
@@ -579,6 +613,40 @@ const profileCompletion =
                   <button className="btn auth-submit w-100 mt-4" type="submit" disabled={loading}>
                     {loading ? 'Please wait...' : authMode === 'login' ? 'Log in to SkillSwap' : 'Create My Account'} <span aria-hidden="true">→</span>
                   </button>
+                  {authMode === "login" && (
+  <>
+    <div className="text-center my-3 text-muted">OR</div>
+
+    <button
+  type="button"
+  className="btn google-btn w-100"
+  onClick={() => {
+    const googleUser = {
+      id: "google-demo",
+      name: "Isha Malaviya",
+      email: "isha@gmail.com",
+      college: "JG University",
+      bio: "Signed in with Google (Demo)"
+    };
+
+    localStorage.setItem("token", "skillswap-google-token");
+    localStorage.setItem("user", JSON.stringify(googleUser));
+
+    setUser(googleUser);
+    setToken("skillswap-google-token");
+    setSuccess("Google Login Successful!");
+  }}
+>
+      <img
+        src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+        alt="Google"
+        width="20"
+        className="me-2"
+      />
+      Continue with Google
+    </button>
+  </>
+)}
                 </form>}
                 <p className="terms text-center mb-0 mt-4">{isForgotPassword ? 'Remembered your password? ' : authMode === 'register' ? <>Already a member? </> : 'New to SkillSwap? '}{isForgotPassword || authMode === 'register' ? <button type="button" className="inline-link" onClick={() => changeAuthPage('login')}>Log in</button> : <button type="button" className="inline-link" onClick={() => changeAuthPage('register')}>Register</button>}{authMode === 'register' && !isForgotPassword ? <><br /><span className="d-inline-block mt-2">By joining, you agree to our <a href="#terms">Terms</a> and <a href="#privacy">Privacy Policy</a>.</span></> : null}</p>
               </div>
@@ -641,6 +709,43 @@ const profileCompletion =
       </div>
     );
   }
+  if (dashboardView === "skillDetails") {
+  return (
+    <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
+      <nav className="navbar dashboard-navbar shadow-sm">
+        <div className="container">
+          <a className="navbar-brand fw-bold">SkillSwap AI</a>
+
+          <button
+            className="btn profile-nav-button"
+            onClick={() => setDashboardView("dashboard")}
+          >
+            ← Dashboard
+          </button>
+        </div>
+      </nav>
+
+      <main className="container py-5">
+        <div className="card shadow-sm rounded-4 border-0 p-4">
+          <h2>{selectedSkill?.name}</h2>
+
+          <p><strong>Category:</strong> {selectedSkill?.category}</p>
+
+          <p><strong>Student:</strong> {selectedSkill?.user_name}</p>
+
+          <p>{selectedSkill?.description}</p>
+
+          <button
+            className="btn add-skill-button"
+            onClick={() => handleRequestSwap(selectedSkill)}
+          >
+            Request Skill Swap
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}
   if (dashboardView === 'about') {
     
   return (
@@ -783,6 +888,7 @@ const profileCompletion =
     </div>
   );
 }
+
   return (
     <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
       {showToast && (
@@ -816,32 +922,32 @@ const profileCompletion =
   {t.logout} <span aria-hidden="true">→</span>
 </button>
 
-<div className="position-relative">
-  <button
-  className="btn profile-icon"
-  onClick={() => {
-    if (!settings.notifications) return;
-    setShowNotifications(!showNotifications);
-  }}
->
-  🔔
-</button>
-  {showNotifications && settings.notifications && (
-    <div className="notification-box">
-      <h6>Notifications</h6>
+{settings.notifications && (
+  <div className="position-relative">
+    <button
+      className="btn profile-icon"
+      onClick={() => setShowNotifications(!showNotifications)}
+    >
+      🔔
+    </button>
 
-      {notifications.length === 0 ? (
-        <p className="small m-0">No notifications</p>
-      ) : (
-        notifications.map((item) => (
-          <div key={item.id} className="notification-item">
-            {item.text}
-          </div>
-        ))
-      )}
-    </div>
-  )}
-</div>
+    {showNotifications && (
+      <div className="notification-box">
+        <h6>Notifications</h6>
+
+        {notifications.length === 0 ? (
+          <p className="small m-0">No notifications</p>
+        ) : (
+          notifications.map((item) => (
+            <div key={item.id} className="notification-item">
+              {item.text}
+            </div>
+          ))
+        )}
+      </div>
+    )}
+  </div>
+)}
 
 <button
   className="btn profile-icon"
@@ -850,9 +956,6 @@ const profileCompletion =
   {user.name?.charAt(0).toUpperCase()}
 </button>
 
-<button className="btn dashboard-logout" onClick={handleLogout}>
-  Logout <span aria-hidden="true">→</span>
-</button>
           </div>
         </div>
       </nav>
@@ -964,6 +1067,76 @@ const profileCompletion =
                       {t.addSkill} <span aria-hidden="true">+</span>
                     </button>
                   </form>
+                  <div className="card shadow-sm border-0 rounded-4 mt-4">
+  <div className="card-body">
+    <h5 className="mb-3">💡 Quick Tips</h5>
+
+    <div className="d-flex flex-column gap-3">
+
+      <div className="d-flex align-items-start gap-2">
+        <span>✅</span>
+        <small>Add at least 3 skills to improve AI recommendations.</small>
+      </div>
+
+      <div className="d-flex align-items-start gap-2">
+        <span>🎯</span>
+        <small>Select the correct skill level (Beginner, Intermediate, Advanced).</small>
+      </div>
+
+      <div className="d-flex align-items-start gap-2">
+        <span>📝</span>
+        <small>Write a short description so other students understand your skill.</small>
+      </div>
+
+      <div className="d-flex align-items-start gap-2">
+        <span>🤝</span>
+        <small>Accept skill swap requests to increase your profile completion.</small>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div className="card shadow-sm border-0 rounded-4 mt-4">
+  <div className="card-body">
+    <h5 className="mb-3">📊 Your Learning Stats</h5>
+
+    <div className="mb-3">
+      <small>Skills Added</small>
+      <div className="progress mt-1">
+        <div
+          className="progress-bar bg-primary"
+          style={{ width: `${mySkills.length * 20}%` }}
+        >
+          {mySkills.length}
+        </div>
+      </div>
+    </div>
+
+    <div className="mb-3">
+      <small>Swap Requests</small>
+      <div className="progress mt-1">
+        <div
+          className="progress-bar bg-success"
+          style={{ width: `${requests.length * 15}%` }}
+        >
+          {requests.length}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <small>Profile Completion</small>
+      <div className="progress mt-1">
+        <div
+          className="progress-bar bg-warning text-dark"
+          style={{ width: `${profileCompletion}%` }}
+        >
+          {profileCompletion}%
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
                 </div>
               </div>
             </div>
@@ -1059,7 +1232,10 @@ const profileCompletion =
                             {skill.user_id !== user.id ? (
                               <button
                                 className="btn btn-outline-primary btn-sm mt-3"
-                                onClick={() => handleRequestSwap(skill)}
+                                onClick={() => {
+  setSelectedSkill(skill);
+  setDashboardView("skillDetails");
+}}
                                 disabled={loading}
                               >
                                 Request Swap
