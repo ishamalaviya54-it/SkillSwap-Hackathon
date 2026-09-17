@@ -45,6 +45,11 @@ const demoChats = [
   { id: 'krisha', name: 'Krisha Mehta', avatar: 'KM', lastMessage: 'See you at the workshop.', time: 'Sun', messages: [{ id: 'krisha-1', from: 'them', text: 'See you at the workshop.', time: 'Sun' }] },
   { id: 'meet', name: 'Meet Jani', avatar: 'MJ', lastMessage: 'I can help with JavaScript.', time: 'Sat', messages: [{ id: 'meet-1', from: 'them', text: 'I can help with JavaScript.', time: 'Sat' }] },
 ];
+const demoProfileReviews = [
+  { name: 'Aarav Patel', initials: 'AP', rating: '★★★★★', comment: 'Great React mentor.', date: '2 weeks ago' },
+  { name: 'Neha Soni', initials: 'NS', rating: '★★★★', comment: 'Helpful UI/UX guidance.', date: '1 month ago' },
+  { name: 'Maya Patel', initials: 'MP', rating: '★★★★★', comment: 'Easy to learn with.', date: '2 months ago' },
+];
 
 const getStoredPostedSkills = () => {
   try {
@@ -93,7 +98,7 @@ function App() {
 
   return () => clearTimeout(timer);
 }, []);
-  const [dashboardView, setDashboardView] = useState('dashboard');
+  const [dashboardView, setDashboardView] = useState(() => token && user ? 'dashboard' : 'landing');
   const [activeTab, setActiveTab] = useState("home");
   const [profile, setProfile] = useState(() => {
   try {
@@ -151,6 +156,8 @@ function App() {
   const [exploreSearch, setExploreSearch] = useState('');
   const [exploreCategory, setExploreCategory] = useState('All');
   const [selectedSkill, setSelectedSkill] = useState(null);
+  const [requestSwapOpen, setRequestSwapOpen] = useState(false);
+  const [requestSwapForm, setRequestSwapForm] = useState({ yourSkill: '', wantedSkill: '', message: '' });
   const [postForm, setPostForm] = useState({ mode: 'teach', name: '', description: '', category: 'Technical', tags: '', image: '' });
   const [chats, setChats] = useState(() => {
     try {
@@ -268,8 +275,9 @@ function App() {
       setUser(demoUser);
       setToken('skillswap-demo-token');
       setForm(initialForm);
+      setDashboardView('profile');
       setLoading(false);
-      return;
+      return true;
     }
 
     const hasValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
@@ -300,6 +308,7 @@ function App() {
     setUser(demoUser);
     setToken('skillswap-demo-token');
     setForm(initialForm);
+    setDashboardView('profile');
     setLoading(false);
   };
 
@@ -386,7 +395,7 @@ function App() {
     setMessageDraft('');
   };
 
-  const handleRequestSwap = async (selectedSkill) => {
+  const handleRequestSwap = async (selectedSkill, requestDetails = {}) => {
     setLoading(true);
     setError('');
     setSuccess('');
@@ -396,17 +405,20 @@ function App() {
         id: `request-${Date.now()}`,
         requester_name: 'You',
         target_name: selectedSkill.user_name,
-        skill_offered: selectedSkill.name,
-        skill_wanted: 'Your skill',
-        message: `You requested a skill swap with ${selectedSkill.user_name} for ${selectedSkill.name}.`,
+        skill_offered: requestDetails.yourSkill || selectedSkill.name,
+        skill_wanted: requestDetails.wantedSkill || selectedSkill.name,
+        message: requestDetails.message || `You requested a skill swap with ${selectedSkill.user_name} for ${selectedSkill.name}.`,
         status: 'Pending',
+        created_at: new Date().toISOString(),
       };
       setRequests((prev) => {
         const updatedRequests = [...prev, newRequest];
         localStorage.setItem('skillswap-swap-requests', JSON.stringify(updatedRequests));
         return updatedRequests;
       });
-      setSuccess("Demo swap request sent!");
+      setSuccess('Swap request sent successfully!');
+      setToastMessage('Swap request sent successfully!');
+      setShowToast(true);
 
 if (settings.notifications) {
   setToastMessage(`Swap request sent to ${selectedSkill.user_name}! 🎉`);
@@ -430,13 +442,15 @@ setTimeout(() => {
 }, 3000);
       
       setLoading(false);
-      return;
+  return true;
     }
 
     try {
       const response = await api.post('/requests', {
         targetId: selectedSkill.user_id,
-        message: 'Hi! I would like to swap skills with you.',
+        message: requestDetails.message || 'Hi! I would like to swap skills with you.',
+        skillOffered: requestDetails.yourSkill,
+        skillWanted: requestDetails.wantedSkill || selectedSkill.name,
       });
 
       setRequests((prev) => {
@@ -445,8 +459,16 @@ setTimeout(() => {
         return updatedRequests;
       });
       setSuccess('Swap request sent successfully!');
+      setToastMessage('Swap request sent successfully!');
+      setShowToast(true);
+      if (settings.notifications) {
+        setNotifications((prev) => [{ id: Date.now(), text: `📩 Swap request sent to ${selectedSkill.user_name}.`, read: false }, ...prev]);
+        setShowNotifications(true);
+      }
+      return true;
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to send swap request.');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -457,6 +479,63 @@ setTimeout(() => {
     setDashboardView('skillDetails');
   };
 
+  const openStudentProfile = (student) => {
+    setSelectedSkill({ ...student, _profileReturnView: 'explore' });
+    setDashboardView('publicProfile');
+  };
+
+  const openOwnPublicProfile = () => {
+    const offeredSkills = (profile.skillsOffered || '').split(',').map((name, index) => ({
+      id: `profile-skill-${index}`,
+      name: name.trim(),
+      level: 'Intermediate',
+    })).filter((skill) => skill.name);
+    setSelectedSkill({
+      ...user,
+      ...profile,
+      id: user?.id || 'current-user',
+      name: profile.name || user?.name || 'Student',
+      email: profile.email || user?.email,
+      skills: offeredSkills,
+      skillsWanted: profile.skillsWanted,
+      profilePublic: profile.profilePublic !== false,
+      _profileReturnView: 'profile',
+    });
+    setDashboardView('publicProfile');
+  };
+
+  const openRequestSwapModal = (student) => {
+    const offeredSkills = mySkills.length ? mySkills : (profile.skillsOffered || '').split(',').map((name, index) => ({ id: `profile-skill-${index}`, name: name.trim() })).filter((skill) => skill.name);
+    setSelectedSkill(student);
+    setRequestSwapForm({ yourSkill: offeredSkills[0]?.name || '', wantedSkill: student.skills?.[0]?.name || '', message: '' });
+    setRequestSwapOpen(true);
+  };
+
+  const handleRequestSwapSubmit = async (event) => {
+    event.preventDefault();
+    if (!selectedSkill || !requestSwapForm.yourSkill || !requestSwapForm.wantedSkill) return;
+    const requestCreated = await handleRequestSwap(selectedSkill, { ...requestSwapForm, message: requestSwapForm.message.trim() });
+    if (!requestCreated) return;
+    setRequestSwapOpen(false);
+    setRequestSwapForm({ yourSkill: '', wantedSkill: '', message: '' });
+    setDashboardView('mySwaps');
+  };
+
+  const openStudentRequest = (student) => {
+    const firstSkill = student.skills?.[0]?.name || 'Skill exchange';
+    setSelectedSkill({
+      id: `student-skill-${student.id}`,
+      user_id: student.id,
+      user_name: student.name,
+      name: firstSkill,
+      category: 'Technical',
+      students: student.students || 1,
+      description: `Connect with ${student.name} to exchange skills.`,
+      icon: firstSkill.slice(0, 2).toUpperCase(),
+    });
+    setDashboardView('skillDetails');
+  };
+
   const handleExploreRequest = async () => {
     if (!selectedSkill) return;
     await handleRequestSwap(selectedSkill);
@@ -464,35 +543,58 @@ setTimeout(() => {
     window.setTimeout(() => document.getElementById('swap-requests')?.scrollIntoView({ behavior: 'smooth' }), 0);
   };
 
- const handleRequestDecision = (requestId, status) => {
+const handleRequestDecision = (requestId, status) => {
   const updatedRequests = requests.map((request) =>
     request.id === requestId
       ? { ...request, status }
       : request
   );
 
+  const updatedRequest = updatedRequests.find(
+    (request) => request.id === requestId
+  );
+
   setRequests(updatedRequests);
+
   localStorage.setItem(
     "skillswap-swap-requests",
     JSON.stringify(updatedRequests)
   );
 
   if (settings.notifications) {
-  setToastMessage(`🎉 Swap request ${status}!`);
-  setShowToast(true);
+    setToastMessage(`🎉 Swap request ${status}!`);
+    setShowToast(true);
 
-  setNotifications((prev) => [
-    {
-      id: Date.now(),
-      text: `🎉 Swap request ${status}!`,
-      read: false,
-    },
-    ...prev,
-  ]);
-}
+    setNotifications((prev) => [
+      {
+        id: Date.now(),
+        text: `🎉 Swap request ${status}!`,
+        read: false,
+      },
+      ...prev,
+    ]);
+  }
 
-setSuccess(`Swap request ${status}!`);
-};
+  setSuccess(`Swap request ${status}!`);
+
+  if (status === "Accepted" && updatedRequest) {
+    setSelectedSkill({
+      ...updatedRequest,
+      name:
+        updatedRequest.skill_wanted ||
+        updatedRequest.skill_offered ||
+        "Skill Swap",
+      user_name:
+        updatedRequest.requester_name === "You"
+          ? updatedRequest.target_name
+          : updatedRequest.requester_name,
+      icon: "↔",
+      category: "Technical",
+    });
+
+    setDashboardView("activeSwap");
+  }
+  };
 
   const handleClearSwapRequests = () => {
     setRequests([]);
@@ -553,8 +655,6 @@ const handleProfileDarkModeToggle = () => {
 const handleProfileSave = (event) => {
   event.preventDefault();
 
-  const savedProfile = JSON.parse(localStorage.getItem('skillswap-profile') || 'null');
-
   localStorage.setItem("skillswap-profile", JSON.stringify(profile));
 
   const updatedUser = {
@@ -565,9 +665,9 @@ const handleProfileSave = (event) => {
 
   localStorage.setItem("user", JSON.stringify(updatedUser));
   setUser(updatedUser);
-  setSuccess(savedProfile?.profilePublic !== profile.profilePublic
-    ? "Profile visibility updated successfully!"
-    : "Profile changes saved!");
+  setToastMessage('Profile saved successfully!');
+  setShowToast(true);
+  setDashboardView('dashboard');
 };
 
 const handleAccountSave = (event, nextAccount = accountForm) => {
@@ -643,6 +743,7 @@ const profileCompletion =
     setRequests([]);
     setForm(initialForm);
     setAuthMode('login');
+    setDashboardView('landing');
     setError('');
     setSuccess('');
   };
@@ -657,6 +758,47 @@ const profileCompletion =
   );
 }
   if (!token || !user) {
+    if (dashboardView === 'landing') {
+      return (
+        <LandingScreen
+          onHome={() => setDashboardView('landing')}
+          onBrowse={(query = '') => {
+            setExploreSearch(query);
+            setExploreCategory('All');
+            setDashboardView('explore');
+          }}
+          onLogin={() => {
+            setAuthMode('login');
+            setDashboardView('auth');
+          }}
+          onRegister={() => {
+            setAuthMode('register');
+            setDashboardView('auth');
+          }}
+        />
+      );
+    }
+
+    if (dashboardView === 'explore') {
+      return (
+        <ExploreSkillsScreen
+          settings={settings}
+          search={exploreSearch}
+          setSearch={setExploreSearch}
+          category={exploreCategory}
+          setCategory={setExploreCategory}
+          users={users}
+          onViewProfile={openStudentProfile}
+          onRequestSwap={openStudentRequest}
+          onBack={() => setDashboardView('landing')}
+          onHome={() => setDashboardView('landing')}
+          onMySkills={() => setDashboardView('landing')}
+          onNavigate={setDashboardView}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
     return (
       <main className="auth-page">
         <div className="auth-orb auth-orb-one" aria-hidden="true" />
@@ -764,6 +906,7 @@ const profileCompletion =
 
     setUser(googleUser);
     setToken("skillswap-google-token");
+    setDashboardView('profile');
     setSuccess("Google Login Successful!");
   }}
 >
@@ -792,7 +935,9 @@ const profileCompletion =
       <ProfileScreen
         profile={profile}
         settings={settings}
-        onBack={() => setDashboardView('dashboard')}
+        onBack={() => {
+          if (localStorage.getItem('skillswap-profile')) setDashboardView('dashboard');
+        }}
         onSettings={() => setDashboardView('settings')}
         onAccount={() => setDashboardView('account')}
         onNotifications={() => setDashboardView('notifications')}
@@ -805,7 +950,7 @@ const profileCompletion =
         onExplore={() => setDashboardView('explore')}
         onPost={() => setDashboardView('post')}
         onMessages={() => setDashboardView('messages')}
-        onNavigate={setDashboardView}
+        onNavigate={(view) => view === 'profile' ? openOwnPublicProfile() : setDashboardView(view)}
         onProfileChange={handleProfileChange}
         onProfileSave={handleProfileSave}
         stats={{ skills: mySkills.length || 5, swaps: requests.filter((request) => request.status === 'Accepted').length || 3, followers: 12, following: 8 }}
@@ -820,10 +965,16 @@ const profileCompletion =
         setSearch={setExploreSearch}
         category={exploreCategory}
         setCategory={setExploreCategory}
-        skills={[...exploreSkills, ...postedSkills]}
-        onSelectSkill={openExploreSkill}
+          users={users}
+          onViewProfile={openStudentProfile}
+          onRequestSwap={openStudentRequest}
         onBack={() => setDashboardView('dashboard')}
-        onNavigate={setDashboardView}
+          onHome={() => setDashboardView('dashboard')}
+          onMySkills={() => {
+            setDashboardView('dashboard');
+            window.setTimeout(() => document.getElementById('my-skills')?.scrollIntoView({ behavior: 'smooth' }), 0);
+          }}
+        onNavigate={(view) => view === 'profile' ? openOwnPublicProfile() : setDashboardView(view)}
         onLogout={handleLogout}
       />
     );
@@ -904,6 +1055,74 @@ const profileCompletion =
         onBack={() => setDashboardView('explore')}
         onRequestSwap={handleExploreRequest}
         onNavigate={setDashboardView}
+        onLogout={handleLogout}
+      />
+    );
+  }
+  if (dashboardView === 'publicProfile') {
+    return (
+      <>
+        <PublicUserProfileScreen
+          student={selectedSkill}
+          currentUser={user}
+          settings={settings}
+          onBack={() => setDashboardView(selectedSkill?._profileReturnView || 'explore')}
+          onHome={() => setDashboardView('dashboard')}
+          onBrowse={() => setDashboardView('explore')}
+          onMySwaps={() => {
+            setDashboardView('dashboard');
+            window.setTimeout(() => document.getElementById('swap-requests')?.scrollIntoView({ behavior: 'smooth' }), 0);
+          }}
+          onProfile={openOwnPublicProfile}
+          onEditProfile={() => setDashboardView('profile')}
+          onRequestSwap={() => openRequestSwapModal(selectedSkill)}
+          onNavigate={(view) => view === 'profile' ? openOwnPublicProfile() : setDashboardView(view)}
+          onLogout={handleLogout}
+        />
+        {requestSwapOpen ? <RequestSwapModal
+          student={selectedSkill}
+          profile={profile}
+          mySkills={mySkills}
+          form={requestSwapForm}
+          onChange={(event) => setRequestSwapForm((previousForm) => ({ ...previousForm, [event.target.name]: event.target.value }))}
+          onSubmit={handleRequestSwapSubmit}
+          onClose={() => setRequestSwapOpen(false)}
+        /> : null}
+        {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
+      </>
+    );
+  }
+  if (dashboardView === 'activeSwap') {
+  return (
+    <ActiveSwapScreen
+      settings={settings}
+      swap={selectedSkill}
+      onBack={() => setDashboardView('mySwaps')}
+      onHome={() => setDashboardView('dashboard')}
+      onBrowse={() => setDashboardView('explore')}
+      onMySwaps={() => setDashboardView('mySwaps')}
+      onProfile={openOwnPublicProfile}
+      onNavigate={(view) =>
+        view === 'profile'
+          ? openOwnPublicProfile()
+          : setDashboardView(view)
+      }
+      onLogout={handleLogout}
+    />
+  );
+}
+  if (dashboardView === 'mySwaps') {
+    return (
+      <MySwapsScreen
+        requests={requests}
+        settings={settings}
+        showToast={showToast}
+        toastMessage={toastMessage}
+        onCancelRequest={(requestId) => handleRequestDecision(requestId, 'Declined')}
+        onHome={() => setDashboardView('dashboard')}
+        onBrowse={() => setDashboardView('explore')}
+        onProfile={openOwnPublicProfile}
+        onNavigate={(view) => view === 'profile' ? openOwnPublicProfile() : setDashboardView(view)}
         onLogout={handleLogout}
       />
     );
@@ -1488,6 +1707,91 @@ const profileCompletion =
   );
 }
 
+function LandingScreen({ onHome, onBrowse, onLogin, onRegister }) {
+  const [search, setSearch] = useState('');
+  const popularSkills = ['Photoshop', 'Excel', 'Coding', 'Guitar', 'English'];
+
+  const searchForSkill = (skill = search) => {
+    onBrowse(skill.trim());
+  };
+
+  return (
+    <main className="landing-page">
+      <nav className="landing-navbar" aria-label="Primary navigation">
+        <div className="container landing-navbar-inner">
+          <button className="landing-brand" type="button" onClick={onHome}>
+            <span className="landing-brand-mark">↗</span>
+            <span>SkillSwap</span>
+          </button>
+          <div className="landing-nav-links">
+            <button type="button" onClick={onHome}>Home</button>
+            <button type="button" onClick={() => onBrowse('')}>Browse Skills</button>
+            <button type="button" onClick={onLogin}>Login</button>
+            <button className="landing-signup-button" type="button" onClick={onRegister}>Signup</button>
+          </div>
+        </div>
+      </nav>
+
+      <section className="landing-hero">
+        <div className="container landing-hero-grid">
+          <div className="landing-hero-copy">
+            <span className="landing-eyebrow">LEARN. SHARE. GROW.</span>
+            <h1>Exchange Skills.<br /><span>Grow Together.</span></h1>
+            <p>Share what you know. Learn what you want.</p>
+            <div className="landing-search-wrap">
+              <span className="landing-search-icon" aria-hidden="true">⌕</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && searchForSkill()}
+                placeholder="Search for a skill (e.g. Photoshop, Excel...)"
+                aria-label="Search for a skill"
+              />
+              <button type="button" onClick={() => searchForSkill()}>Search</button>
+            </div>
+          </div>
+          <div className="landing-illustration" aria-label="Students exchanging skills" role="img">
+            <div className="landing-illustration-orbit landing-orbit-one" />
+            <div className="landing-illustration-orbit landing-orbit-two" />
+            <div className="landing-person landing-person-left"><span className="landing-person-head" /><span className="landing-person-body" /><span className="landing-person-arm" /></div>
+            <div className="landing-person landing-person-right"><span className="landing-person-head" /><span className="landing-person-body" /><span className="landing-person-arm" /></div>
+            <div className="landing-swap-card"><strong>Skill</strong><span>↔</span><strong>Skill</strong></div>
+            <div className="landing-floating-card landing-floating-card-top">✦ <span>Learn together</span></div>
+            <div className="landing-floating-card landing-floating-card-bottom">◉ <span>500+ students</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-popular-section">
+        <div className="container">
+          <div className="landing-section-heading">
+            <span className="landing-eyebrow">FIND YOUR NEXT SKILL</span>
+            <h2>Popular skills</h2>
+          </div>
+          <div className="landing-skill-pills">
+            {popularSkills.map((skill) => <button key={skill} type="button" onClick={() => searchForSkill(skill)}>{skill}</button>)}
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-how-section">
+        <div className="container">
+          <div className="landing-section-heading text-center">
+            <span className="landing-eyebrow">SIMPLE BY DESIGN</span>
+            <h2>How SkillSwap works</h2>
+          </div>
+          <div className="row g-4 landing-steps">
+            <div className="col-md-4"><article className="landing-step-card"><span className="landing-step-number">01</span><div className="landing-step-icon">◉</div><h3>Create Profile</h3><p>Add your skills and preferences</p></article></div>
+            <div className="col-md-4"><article className="landing-step-card"><span className="landing-step-number">02</span><div className="landing-step-icon">⌕</div><h3>Find Skill</h3><p>Search or browse others</p></article></div>
+            <div className="col-md-4"><article className="landing-step-card"><span className="landing-step-number">03</span><div className="landing-step-icon">↔</div><h3>Swap</h3><p>Connect and learn together</p></article></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function DashboardHome({
   user,
   settings,
@@ -1648,7 +1952,8 @@ function AppSidebar({ current, onNavigate, onLogout }) {
   const [open, setOpen] = useState(false);
   const items = [
     ['dashboard', '⌂', 'Home'],
-    ['explore', '◎', 'Explore'],
+    ['explore', '◎', 'Browse'],
+    ['mySwaps', '↔', 'My Swaps'],
     ['post', '＋', 'Post'],
     ['messages', '◌', 'Messages'],
     ['notifications', '♢', 'Notifications'],
@@ -1793,7 +2098,7 @@ function ProfileScreen({ profile, settings, onBack, onSettings, onAccount, onNot
             </label>
           </fieldset>
         </div>
-        <div className="profile-modal-actions"><button type="button" className="profile-cancel-button" onClick={() => setEditOpen(false)}>Cancel</button><button type="submit" className="profile-save-button">Save Changes</button></div>
+        <div className="profile-modal-actions"><button type="button" className="profile-cancel-button" onClick={() => setEditOpen(false)}>Cancel</button><button type="submit" className="profile-save-button">Save Profile</button></div>
       </form></section></div> : null}
 
       {profileToast ? <div className="profile-success-toast" role="status">{profileToast}</div> : null}
@@ -2021,42 +2326,163 @@ function NotificationsScreen({ settings, onBack, onExplore, onPost, onProfile, o
   );
 }
 
-function ExploreSkillsScreen({ settings, search, setSearch, category, setCategory, skills, onSelectSkill, onBack, onNavigate, onLogout }) {
+function ExploreSkillsScreen({ settings, search, setSearch, category, setCategory, users, onViewProfile, onRequestSwap, onBack, onHome, onMySkills, onNavigate, onLogout }) {
   const categories = ['All', 'Technical', 'Creative', 'Language'];
-  const filteredSkills = skills.filter((skill) => {
-    const matchesCategory = category === 'All' || skill.category === category;
+  const availabilityOptions = ['All', 'Weekends', 'Evenings', 'Morning', 'Afternoon'];
+  const [availability, setAvailability] = useState('All');
+
+  const getCategory = (student) => {
+    const searchableSkills = (student.skills || []).map((skill) => skill.name).join(' ').toLowerCase();
+    if (/photoshop|graphic|design|guitar|music/.test(searchableSkills)) return 'Creative';
+    if (/english|communication|language|speaking/.test(searchableSkills)) return 'Language';
+    return 'Technical';
+  };
+
+  const filteredUsers = users.filter((student) => {
+    if (student.profilePublic === false) return true;
     const query = search.trim().toLowerCase();
-    const matchesSearch = !query || `${skill.name} ${skill.category}`.toLowerCase().includes(query);
-    return matchesCategory && matchesSearch;
+    const searchableText = `${student.name} ${student.department || ''} ${student.college || ''} ${(student.skills || []).map((skill) => skill.name).join(' ')}`.toLowerCase();
+    const matchesSearch = !query || searchableText.includes(query);
+    const matchesCategory = category === 'All' || getCategory(student) === category;
+    const studentAvailability = (student.availability || '').toLowerCase();
+    const matchesAvailability = availability === 'All' || studentAvailability.includes(availability.toLowerCase().replace('weekends', 'weekend'));
+    return matchesSearch && matchesCategory && matchesAvailability;
   });
 
-  return (
-    <div className={`skill-explore-page ${settings.darkMode ? 'dark-theme' : ''}`}>
-      <AppSidebar current="explore" onNavigate={onNavigate} onLogout={onLogout} />
-      <header className="skill-explore-header">
-        <div className="container skill-explore-header-inner">
-          <button className="screen-icon-button" aria-label="Back to dashboard" onClick={onBack}>←</button>
-          <div><span className="dashboard-kicker">SKILLSWAP AI</span><h1>Explore Skills</h1></div>
-          <button className="screen-icon-button" aria-label="Open profile" onClick={onBack}>●</button>
-        </div>
-      </header>
+  const initials = (name = '') => name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
-      <main className="container skill-explore-content">
-        <div className="explore-search"><span aria-hidden="true">⌕</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search skills..." /></div>
-        <div className="skill-category-chips" role="tablist" aria-label="Skill categories">
-          {categories.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}
-        </div>
-        <div className="explore-title-row"><div><span className="dashboard-kicker">DISCOVER SOMETHING NEW</span><h2>Popular skills</h2></div><span>{filteredSkills.length} skills</span></div>
-        <div className="explore-skill-grid">
-          {filteredSkills.map((skill) => <article className="explore-skill-card" key={skill.id} onClick={() => onSelectSkill(skill)} role="button" tabIndex="0" onKeyDown={(event) => event.key === 'Enter' && onSelectSkill(skill)}>
-            <div className="explore-skill-card-top"><div className="explore-skill-icon">{skill.icon}</div><span className="explore-category-label">{skill.category}</span></div>
-            <h3>{skill.name}</h3>
-            <p>{skill.description}</p>
-            <div className="explore-skill-card-bottom"><span>◉ {skill.students} students</span><button onClick={(event) => { event.stopPropagation(); onSelectSkill(skill); }}>Swap <span>→</span></button></div>
-          </article>)}
-        </div>
-        {!filteredSkills.length ? <div className="empty-dashboard-state">No skills match your search.</div> : null}
+  return (
+    <div className={`browse-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <AppSidebar current="explore" onNavigate={onNavigate} onLogout={onLogout} />
+      <div className="browse-stage">
+        <header className="browse-header">
+          <div className="container browse-header-inner">
+            <button className="browse-back-button" type="button" aria-label="Back" onClick={onBack}>←</button>
+            <div><span className="browse-kicker">SKILLSWAP AI</span><h1>Browse Skills</h1><p>Find students who can teach what you want to learn.</p></div>
+            <span className="browse-header-mark" aria-hidden="true">◎</span>
+          </div>
+        </header>
+        <nav className="browse-main-nav" aria-label="Browse navigation">
+          <div className="container browse-main-nav-inner">
+            <button type="button" onClick={onHome}>Home</button>
+            <button className="active" type="button" onClick={() => onNavigate('explore')}>Browse</button>
+            <button type="button" onClick={onMySkills}>My Skills</button>
+            <button type="button" onClick={() => onNavigate('profile')}>Profile</button>
+          </div>
+        </nav>
+
+        <main className="container browse-content">
+          <div className="browse-search-row">
+            <div className="browse-search"><span aria-hidden="true">⌕</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by skill or student name..." aria-label="Search by skill or student name" /></div>
+            <span className="browse-result-count">{filteredUsers.length} students</span>
+          </div>
+          <div className="browse-filter-area">
+            <div className="browse-filter-group" role="tablist" aria-label="Skill category filters">
+              {categories.map((item) => <button key={item} type="button" className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}
+            </div>
+            <label className="browse-availability-filter">Availability<select value={availability} onChange={(event) => setAvailability(event.target.value)} aria-label="Availability filter">{availabilityOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+          </div>
+
+          <div className="browse-section-heading"><div><span className="browse-kicker">MEET YOUR MATCH</span><h2>Students to learn from</h2></div></div>
+          <div className="browse-student-grid">
+            {filteredUsers.map((student) => {
+              const isPrivate = student.profilePublic === false;
+              const offeredSkills = student.skills || [];
+              return (
+                <article className="browse-student-card" key={student.id}>
+                  {isPrivate ? <div className="browse-private-state"><span className="browse-avatar">{initials(student.name)}</span><strong>Private Profile</strong><p>This student's profile details are hidden.</p></div> : <>
+                    <div className="browse-student-heading"><span className="browse-avatar">{initials(student.name)}</span><div><h3>{student.name}</h3><p>{student.department || 'Student'}{student.college ? ` · ${student.college}` : ''}</p></div></div>
+                    <div className="browse-card-section"><span>Skills Offered</span><div className="browse-skill-list">{offeredSkills.length ? offeredSkills.map((skill) => <b key={skill.id || skill.name}>{skill.name}</b>) : <b>No skills listed</b>}</div></div>
+                    <div className="browse-card-section"><span>Skills Wanted</span><p>{student.skillsWanted || student.wantedSkills || 'Open to learning new skills'}</p></div>
+                    <div className="browse-card-meta"><span>◷ {student.availability || 'Availability not added'}</span><span>★ {student.rating || '4.8'} <small>({student.reviewCount || student.reviews || 12})</small></span></div>
+                    <div className="browse-card-actions"><button type="button" className="browse-profile-button" onClick={() => onViewProfile(student)}>View Profile</button><button type="button" className="browse-request-button" onClick={() => onRequestSwap(student)}>Request Swap</button></div>
+                  </>}
+                </article>
+              );
+            })}
+          </div>
+          {!filteredUsers.length ? <div className="browse-empty-state">No students match these filters.</div> : null}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function PublicUserProfileScreen({ student, currentUser, settings, onBack, onHome, onBrowse, onMySwaps, onProfile, onEditProfile, onRequestSwap, onNavigate, onLogout }) {
+  if (!student) return null;
+  const isOwnProfile = String(student.id) === String(currentUser?.id);
+  const isPrivate = !isOwnProfile && student.profilePublic === false;
+  const initials = student.name?.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+  const skillsWanted = (student.skillsWanted || student.wantedSkills || '').split(',').map((skill) => skill.trim()).filter(Boolean);
+  const reviews = Array.isArray(student.reviews) ? student.reviews : demoProfileReviews;
+  const profileBio = student.bio || 'Student interested in sharing knowledge and learning new skills.';
+
+  return (
+    <div className={`public-profile-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <AppSidebar current="explore" onNavigate={onNavigate} onLogout={onLogout} />
+      <header className="public-profile-header"><div className="container public-profile-header-inner"><button type="button" className="screen-icon-button" aria-label="Back" onClick={onBack}>←</button><div><span className="browse-kicker">STUDENT PROFILE</span><h1>{isOwnProfile ? 'Your Profile' : 'Public Profile'}</h1></div><span className="browse-header-mark">◎</span></div></header>
+      <nav className="browse-main-nav" aria-label="Profile navigation"><div className="container browse-main-nav-inner"><button type="button" onClick={onHome}>Home</button><button type="button" onClick={onBrowse}>Browse</button><button type="button" onClick={onMySwaps}>My Swaps</button><button className="active" type="button" onClick={onProfile}>Profile</button></div></nav>
+      <main className="container public-profile-content">
+        {isPrivate ? <section className="public-profile-private"><span className="public-profile-avatar">{initials}</span><h2>🔒 Private Profile</h2><p>This student has chosen to keep their profile private.</p></section> : <>
+          <section className="public-profile-summary"><span className="public-profile-avatar">{initials}</span><div><h2>{student.name}</h2><p>{student.department || 'Student'}{student.college ? ` · ${student.college}` : ''}</p><p>★ {student.rating || '4.8'} ({student.reviewCount || student.reviews?.length || 12} reviews) · Available: {student.availability || 'Availability not added'}</p></div></section>
+          <section className="public-profile-panel"><h2>Skills I Offer</h2><div className="public-profile-skill-chips">{student.skills?.length ? student.skills.map((skill) => <article key={skill.id || skill.name}><strong>{skill.name}</strong><span>{skill.level || 'Intermediate'}</span>{skill.description ? <p>{skill.description}</p> : null}</article>) : <p>No skills listed yet.</p>}</div></section>
+          <section className="public-profile-panel"><h2>Skills I Want</h2><div className="public-profile-wanted-chips">{skillsWanted.length ? skillsWanted.map((skill) => <span key={skill}>{skill}</span>) : <p>Open to learning new skills</p>}</div></section>
+          <section className="public-profile-details"><div><span>About</span><p>{profileBio}</p></div><div><span>Availability</span><p>{student.availability || 'Availability not added'}</p></div></section>
+          <section className="public-profile-panel public-profile-reviews"><div className="public-profile-review-heading"><div><span className="browse-kicker">COMMUNITY FEEDBACK</span><h2>Reviews</h2></div><strong>★ {student.rating || '4.8'} <small>({student.reviewCount || reviews.length || 0})</small></strong></div>{reviews.length ? reviews.map((review) => <article key={`${review.name}-${review.date || review.comment}`}><span className="browse-avatar">{review.initials || review.name?.slice(0, 2).toUpperCase()}</span><div><strong>{review.name}</strong><span className="public-profile-stars">{review.rating || '★★★★★'}</span><p>{review.comment}</p>{review.date ? <small>{review.date}</small> : null}</div></article>) : <p>No reviews yet.</p>}</section>
+          {isOwnProfile ? <div className="public-profile-own-actions"><span>Your Profile</span><button type="button" className="public-profile-request" onClick={onEditProfile}>Edit Profile <span>→</span></button></div> : <button type="button" className="public-profile-request" onClick={onRequestSwap}>Request Swap <span>→</span></button>}
+        </>}
       </main>
+    </div>
+  );
+}
+
+function RequestSwapModal({ student, profile, mySkills, form, onChange, onSubmit, onClose }) {
+  const offeredSkills = mySkills.length ? mySkills : (profile.skillsOffered || '').split(',').map((name, index) => ({ id: `profile-skill-${index}`, name: name.trim() })).filter((skill) => skill.name);
+  const wantedSkills = student?.skills || [];
+
+  return (
+    <div className="request-swap-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="request-swap-modal" role="dialog" aria-modal="true" aria-labelledby="request-swap-title">
+        <div className="request-swap-heading"><div><span className="browse-kicker">SKILLSWAP AI</span><h2 id="request-swap-title">Request Skill Swap</h2></div><button type="button" className="request-swap-close" aria-label="Close request dialog" onClick={onClose}>×</button></div>
+        <p className="request-swap-target">Swapping with: <strong>{student?.name}</strong></p>
+        <form onSubmit={onSubmit}>
+          <label>Your Skill<select name="yourSkill" value={form.yourSkill} onChange={onChange} required><option value="" disabled>Select one of your skills</option>{offeredSkills.map((skill) => <option key={skill.id || skill.name} value={skill.name}>{skill.name}</option>)}</select></label>
+          <label>Skill You Want<select name="wantedSkill" value={form.wantedSkill} onChange={onChange} required><option value="" disabled>Select a skill to learn</option>{wantedSkills.map((skill) => <option key={skill.id || skill.name} value={skill.name}>{skill.name}</option>)}</select></label>
+          <label>Message<textarea name="message" rows="4" value={form.message} onChange={onChange} placeholder="Introduce yourself and say what you would like to learn..." required /></label>
+          <div className="request-swap-actions"><button type="button" className="request-swap-cancel" onClick={onClose}>Cancel</button><button type="submit" className="request-swap-submit">Send Request <span>→</span></button></div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function MySwapsScreen({ requests, settings, showToast, toastMessage, onCancelRequest, onHome, onBrowse, onProfile, onNavigate, onLogout }) {
+  const formatDate = (request) => {
+    const value = request.created_at || request.createdAt || request.created_at_date;
+    if (!value) return 'Date not available';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Date not available' : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  };
+
+  return (
+    <div className={`my-swaps-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
+      <AppSidebar current="mySwaps" onNavigate={onNavigate} onLogout={onLogout} />
+      <div className="my-swaps-stage">
+        <header className="my-swaps-header"><div className="container my-swaps-header-inner"><button type="button" className="screen-icon-button" aria-label="Back to home" onClick={onHome}>←</button><div><span className="browse-kicker">SKILLSWAP AI</span><h1>My Swaps</h1><p>Track your skill exchange requests.</p></div><span className="browse-header-mark">↔</span></div></header>
+        <nav className="browse-main-nav" aria-label="My swaps navigation"><div className="container browse-main-nav-inner"><button type="button" onClick={onHome}>Home</button><button type="button" onClick={onBrowse}>Browse</button><button className="active" type="button" onClick={() => onNavigate('mySwaps')}>My Swaps</button><button type="button" onClick={onProfile}>Profile</button></div></nav>
+        <main className="container my-swaps-content">
+          <div className="browse-section-heading"><div><span className="browse-kicker">YOUR ACTIVITY</span><h2>Swap requests</h2></div><span className="my-swaps-count-label">{requests.length} total</span></div>
+          <div className="my-swaps-list">
+            {requests.length ? requests.map((request) => <article className="my-swap-card" key={request.id}>
+              <div className="my-swap-card-heading"><div><span className="my-swap-label">SWAPPING WITH</span><h3>{request.target_name || request.targetName || 'SkillSwap student'}</h3></div><span className={`request-status ${request.status.toLowerCase()}`}>{request.status}</span></div>
+              <div className="my-swap-details"><p><strong>You offer</strong>{request.skill_offered || request.skillOffered || 'Not specified'}</p><p><strong>You want</strong>{request.skill_wanted || request.skillWanted || 'Not specified'}</p></div>
+              <p className="my-swap-message"><strong>Message</strong>{request.message || 'No message added.'}</p>
+              <div className="my-swap-footer"><time>{formatDate(request)}</time>{request.status === 'Pending' ? <button type="button" className="my-swap-cancel" onClick={() => onCancelRequest(request.id)}>Cancel Request</button> : request.status === 'Accepted' ? <button type="button" className="my-swap-view" onClick={onProfile}>View Swap</button> : null}</div>
+            </article>) : <div className="browse-empty-state">No swap requests yet.</div>}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
@@ -2090,5 +2516,189 @@ function SkillDetailsScreen({ settings, skill, onBack, onRequestSwap, onNavigate
     </div>
   );
 }
+function ActiveSwapScreen({
+  settings,
+  swap,
+  onBack,
+  onHome,
+  onBrowse,
+  onMySwaps,
+  onProfile,
+  onNavigate,
+  onLogout,
+}) {
+  if (!swap) {
+    return (
+      <div className="container py-5">
+        <h3>No active swap found.</h3>
+        <button
+          className="btn btn-primary"
+          onClick={onMySwaps}
+        >
+          Back to My Swaps
+        </button>
+      </div>
+    );
+  }
 
+  const partnerName =
+    swap.user_name ||
+    swap.requester_name ||
+    swap.target_name ||
+    "SkillSwap Student";
+
+  const yourSkill =
+    swap.skill_offered || "Your Skill";
+
+  const partnerSkill =
+    swap.skill_wanted || "Partner Skill";
+
+  return (
+    <div className={`active-swap-page ${settings.darkMode ? "dark-theme" : ""}`}>
+
+      <AppSidebar
+        current="mySwaps"
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      />
+
+      <div className="active-swap-stage">
+
+        <header className="active-swap-header">
+          <div className="container active-swap-header-inner">
+
+            <button
+              type="button"
+              className="screen-icon-button"
+              onClick={onBack}
+            >
+              ←
+            </button>
+
+            <div>
+              <span className="browse-kicker">SKILLSWAP AI</span>
+              <h1>Active Swap</h1>
+              <p>Your skill exchange is active.</p>
+            </div>
+
+            <span className="browse-header-mark">
+              ↔
+            </span>
+
+          </div>
+        </header>
+
+        <nav className="browse-main-nav">
+          <div className="container browse-main-nav-inner">
+
+            <button type="button" onClick={onHome}>
+              Home
+            </button>
+
+            <button type="button" onClick={onBrowse}>
+              Browse
+            </button>
+
+            <button
+              type="button"
+              className="active"
+              onClick={onMySwaps}
+            >
+              My Swaps
+            </button>
+
+            <button type="button" onClick={onProfile}>
+              Profile
+            </button>
+
+          </div>
+        </nav>
+
+        <main className="container active-swap-content">
+
+          <section className="active-swap-card">
+
+            <div className="active-swap-skills">
+
+              <div className="active-swap-skill-box">
+                <div className="active-swap-skill-icon">
+                  {yourSkill.charAt(0).toUpperCase()}
+                </div>
+
+                <h3>{yourSkill}</h3>
+                <p>You teach</p>
+              </div>
+
+              <div className="active-swap-arrow">
+                ↔
+              </div>
+
+              <div className="active-swap-skill-box">
+                <div className="active-swap-skill-icon">
+                  {partnerSkill.charAt(0).toUpperCase()}
+                </div>
+
+                <h3>{partnerSkill}</h3>
+                <p>You learn</p>
+              </div>
+
+            </div>
+
+            <div className="active-swap-partner">
+
+              <div className="browse-avatar">
+                {partnerName
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+
+              <div>
+                <span className="browse-kicker">
+                  SKILL PARTNER
+                </span>
+
+                <h2>{partnerName}</h2>
+
+                <p>
+                  Your skill exchange is currently active.
+                </p>
+
+                <p>
+                  <strong>You teach:</strong> {yourSkill}
+                </p>
+
+                <p>
+                  <strong>You learn:</strong> {partnerSkill}
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="active-swap-status">
+              ✓ Swap Active
+            </div>
+
+            <button
+              type="button"
+              className="active-swap-complete-button"
+              onClick={() => {
+                setToastMessage("Swap completed successfully!");
+                setShowToast(true);
+              }}
+            >
+              Mark Swap Complete
+            </button>
+
+          </section>
+
+        </main>
+
+      </div>
+    </div>
+  );
+}
 export default App;
