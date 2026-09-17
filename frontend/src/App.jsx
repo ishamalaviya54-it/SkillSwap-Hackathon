@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from './services/api';
 
 const initialForm = {
@@ -28,8 +28,33 @@ const demoCommunitySkills = [
   { id: 'skill-english', user_id: 'zoe', user_name: 'Zoe Williams', name: 'English', category: 'Language', description: 'Writing confidence and conversational practice.' },
 ];
 
+const exploreSkills = [
+  { id: 'explore-react', user_id: 'arjun', user_name: 'Arjun Mehta', name: 'React Development', category: 'Technical', students: 128, description: 'Build modern, responsive interfaces with React, component patterns, and practical projects.', icon: '</>' },
+  { id: 'explore-uiux', user_id: 'maya', user_name: 'Maya Patel', name: 'UI/UX Design', category: 'Creative', students: 96, description: 'Learn user flows, wireframes, visual hierarchy, and thoughtful product design.', icon: '✦' },
+  { id: 'explore-python', user_id: 'dev', user_name: 'Dev Sharma', name: 'Python Programming', category: 'Technical', students: 114, description: 'Practice Python fundamentals, automation, and data-focused problem solving.', icon: 'Py' },
+  { id: 'explore-graphic', user_id: 'sofia', user_name: 'Sofia Garcia', name: 'Graphic Design', category: 'Creative', students: 82, description: 'Improve composition, branding, color, and polished visual communication.', icon: '✎' },
+  { id: 'explore-english', user_id: 'zoe', user_name: 'Zoe Williams', name: 'English Speaking', category: 'Language', students: 143, description: 'Build confidence in conversation, presentations, vocabulary, and public speaking.', icon: 'Aa' },
+];
+
 
 const demoRequests = [];
+
+const demoChats = [
+  { id: 'riya', name: 'Riya Shah', avatar: 'RS', lastMessage: 'That sounds great! Let us connect soon.', time: '10:42 AM', messages: [{ id: 'riya-1', from: 'them', text: 'Hey! I would love to learn React from you.', time: '10:40 AM' }, { id: 'riya-2', from: 'me', text: 'That sounds great! Let us connect soon.', time: '10:42 AM' }] },
+  { id: 'aarav', name: 'Aarav Patel', avatar: 'AP', lastMessage: 'Can you share your design notes?', time: 'Yesterday', messages: [{ id: 'aarav-1', from: 'them', text: 'Can you share your design notes?', time: 'Yesterday' }] },
+  { id: 'neha', name: 'Neha Soni', avatar: 'NS', lastMessage: 'Thanks for the Python tips!', time: 'Mon', messages: [{ id: 'neha-1', from: 'me', text: 'Happy to help with Python practice.', time: 'Mon' }] },
+  { id: 'krisha', name: 'Krisha Mehta', avatar: 'KM', lastMessage: 'See you at the workshop.', time: 'Sun', messages: [{ id: 'krisha-1', from: 'them', text: 'See you at the workshop.', time: 'Sun' }] },
+  { id: 'meet', name: 'Meet Jani', avatar: 'MJ', lastMessage: 'I can help with JavaScript.', time: 'Sat', messages: [{ id: 'meet-1', from: 'them', text: 'I can help with JavaScript.', time: 'Sat' }] },
+];
+
+const getStoredPostedSkills = () => {
+  try {
+    const savedSkills = JSON.parse(localStorage.getItem('skillswap-posted-skills') || '[]');
+    return Array.isArray(savedSkills) ? savedSkills : [];
+  } catch {
+    return [];
+  }
+};
 
 const getStoredRequests = () => {
   try {
@@ -105,6 +130,7 @@ function App() {
   return () => clearTimeout(timer);
 }, []);
   const [dashboardView, setDashboardView] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState("home");
   const [profile, setProfile] = useState(() => {
   try {
     const savedProfile = JSON.parse(localStorage.getItem("skillswap-profile") || "null");
@@ -128,14 +154,29 @@ function App() {
   });
   const t = translations[settings.language];
   const [users, setUsers] = useState(demoStudents);
-  const [skills, setSkills] = useState(demoCommunitySkills);
+  const [postedSkills, setPostedSkills] = useState(getStoredPostedSkills);
+  const [skills, setSkills] = useState(() => [...demoCommunitySkills, ...getStoredPostedSkills()]);
   const [requests, setRequests] = useState(getStoredRequests);
   const [form, setForm] = useState(initialForm);
   const [skillForm, setSkillForm] = useState({ name: '', category: '', level: '', description: '' });
   const [mySkills, setMySkills] = useState(() => JSON.parse(localStorage.getItem('skillswap-my-skills') || '[]'));
   const [studentSearch, setStudentSearch] = useState('');
   const [communitySearch, setCommunitySearch] = useState('');
+  const [exploreSearch, setExploreSearch] = useState('');
+  const [exploreCategory, setExploreCategory] = useState('All');
   const [selectedSkill, setSelectedSkill] = useState(null);
+  const [postForm, setPostForm] = useState({ mode: 'teach', name: '', description: '', category: 'Technical', tags: '', image: '' });
+  const [chats, setChats] = useState(() => {
+    try {
+      const savedChats = JSON.parse(localStorage.getItem('skillswap-chats') || 'null');
+      return Array.isArray(savedChats) ? savedChats : demoChats;
+    } catch {
+      return demoChats;
+    }
+  });
+  const [selectedChatId, setSelectedChatId] = useState(null);
+  const [chatSearch, setChatSearch] = useState('');
+  const [messageDraft, setMessageDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -156,7 +197,7 @@ function App() {
     if (!token) return;
     if (token === 'skillswap-demo-token') {
       setUsers(demoStudents);
-      setSkills(demoCommunitySkills);
+      setSkills([...demoCommunitySkills, ...getStoredPostedSkills()]);
       setRequests(getStoredRequests());
       return;
     }
@@ -308,6 +349,57 @@ function App() {
     setSuccess('Skill added to your profile!');
   };
 
+  const handlePostFieldChange = (event) => {
+    const { name, value } = event.target;
+    setPostForm((previousForm) => ({ ...previousForm, [name]: value }));
+  };
+
+  const handlePostImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setPostForm((previousForm) => ({ ...previousForm, image: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const handlePostSkill = (event) => {
+    event.preventDefault();
+    const postedSkill = {
+      id: `posted-${Date.now()}`,
+      user_id: user.id,
+      user_name: user.name || 'You',
+      name: postForm.name.trim(),
+      category: postForm.category,
+      description: postForm.description.trim() || 'A new skill shared with the SkillSwap community.',
+      tags: postForm.tags.trim(),
+      image: postForm.image,
+      students: 1,
+      icon: postForm.category === 'Technical' ? '</>' : postForm.category === 'Creative' ? '✦' : 'Aa',
+    };
+    const updatedPostedSkills = [postedSkill, ...postedSkills];
+    setPostedSkills(updatedPostedSkills);
+    setSkills((previousSkills) => [postedSkill, ...previousSkills]);
+    localStorage.setItem('skillswap-posted-skills', JSON.stringify(updatedPostedSkills));
+    setPostForm({ mode: 'teach', name: '', description: '', category: 'Technical', tags: '', image: '' });
+    setToastMessage('Skill posted successfully!');
+    setShowToast(true);
+  };
+
+  const handleSendMessage = (event) => {
+    event.preventDefault();
+    const text = messageDraft.trim();
+    if (!text || !selectedChatId) return;
+    const newMessage = { id: `message-${Date.now()}`, from: 'me', text, time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+    setChats((previousChats) => {
+      const updatedChats = previousChats.map((chat) => chat.id === selectedChatId
+        ? { ...chat, lastMessage: text, time: 'Now', messages: [...chat.messages, newMessage] }
+        : chat);
+      localStorage.setItem('skillswap-chats', JSON.stringify(updatedChats));
+      return updatedChats;
+    });
+    setMessageDraft('');
+  };
+
   const handleRequestSwap = async (selectedSkill) => {
     setLoading(true);
     setError('');
@@ -372,6 +464,18 @@ setTimeout(() => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openExploreSkill = (skill) => {
+    setSelectedSkill(skill);
+    setDashboardView('skillDetails');
+  };
+
+  const handleExploreRequest = async () => {
+    if (!selectedSkill) return;
+    await handleRequestSwap(selectedSkill);
+    setDashboardView('dashboard');
+    window.setTimeout(() => document.getElementById('swap-requests')?.scrollIntoView({ behavior: 'smooth' }), 0);
   };
 
  const handleRequestDecision = (requestId, status) => {
@@ -466,7 +570,6 @@ const handleProfileSave = (event) => {
   const filteredCommunitySkills = skills.filter((skill) => {
   const query = communitySearch.trim().toLowerCase();
   if (!query) return true;
-
   return (
     skill.name.toLowerCase().includes(query) ||
     skill.user_name.toLowerCase().includes(query)
@@ -709,43 +812,68 @@ const profileCompletion =
       </div>
     );
   }
-  if (dashboardView === "skillDetails") {
-  return (
-    <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
-      <nav className="navbar dashboard-navbar shadow-sm">
-        <div className="container">
-          <a className="navbar-brand fw-bold">SkillSwap AI</a>
+  if (dashboardView === 'explore') {
+    return (
+      <ExploreSkillsScreen
+        settings={settings}
+        search={exploreSearch}
+        setSearch={setExploreSearch}
+        category={exploreCategory}
+        setCategory={setExploreCategory}
+        skills={[...exploreSkills, ...postedSkills]}
+        onSelectSkill={openExploreSkill}
+        onBack={() => setDashboardView('dashboard')}
+      />
+    );
+  }
 
-          <button
-            className="btn profile-nav-button"
-            onClick={() => setDashboardView("dashboard")}
-          >
-            ← Dashboard
-          </button>
-        </div>
-      </nav>
+  if (dashboardView === 'post') {
+    return (
+      <PostSkillScreen
+        settings={settings}
+        form={postForm}
+        onChange={handlePostFieldChange}
+        onModeChange={(mode) => setPostForm((previousForm) => ({ ...previousForm, mode }))}
+        onImageChange={handlePostImageChange}
+        onSubmit={handlePostSkill}
+        onBack={() => setDashboardView('dashboard')}
+        onExplore={() => setDashboardView('explore')}
+        onMessages={() => setDashboardView('messages')}
+        onProfile={() => setDashboardView('profile')}
+      />
+    );
+  }
 
-      <main className="container py-5">
-        <div className="card shadow-sm rounded-4 border-0 p-4">
-          <h2>{selectedSkill?.name}</h2>
+  if (dashboardView === 'messages') {
+    return (
+      <MessagesScreen
+        settings={settings}
+        chats={chats}
+        selectedChatId={selectedChatId}
+        setSelectedChatId={setSelectedChatId}
+        search={chatSearch}
+        setSearch={setChatSearch}
+        draft={messageDraft}
+        setDraft={setMessageDraft}
+        onSend={handleSendMessage}
+        onBack={() => setDashboardView('dashboard')}
+        onExplore={() => setDashboardView('explore')}
+        onPost={() => setDashboardView('post')}
+        onProfile={() => setDashboardView('profile')}
+      />
+    );
+  }
 
-          <p><strong>Category:</strong> {selectedSkill?.category}</p>
-
-          <p><strong>Student:</strong> {selectedSkill?.user_name}</p>
-
-          <p>{selectedSkill?.description}</p>
-
-          <button
-            className="btn add-skill-button"
-            onClick={() => handleRequestSwap(selectedSkill)}
-          >
-            Request Skill Swap
-          </button>
-        </div>
-      </main>
-    </div>
-  );
-}
+  if (dashboardView === 'skillDetails') {
+    return (
+      <SkillDetailsScreen
+        settings={settings}
+        skill={selectedSkill}
+        onBack={() => setDashboardView('explore')}
+        onRequestSwap={handleExploreRequest}
+      />
+    );
+  }
   if (dashboardView === 'about') {
     
   return (
@@ -888,6 +1016,44 @@ const profileCompletion =
     </div>
   );
 }
+
+  if (dashboardView === 'dashboard') {
+    return (
+      <DashboardHome
+        user={user}
+        settings={settings}
+        t={t}
+        showToast={showToast}
+        toastMessage={toastMessage}
+        showNotifications={showNotifications}
+        setShowNotifications={setShowNotifications}
+        notifications={notifications}
+        mySkills={mySkills}
+        setMySkills={setMySkills}
+        skillForm={skillForm}
+        setSkillForm={setSkillForm}
+        handleSkillFieldChange={handleSkillFieldChange}
+        handleSkillSubmit={handleSkillSubmit}
+        handleClearMySkills={handleClearMySkills}
+        skills={skills}
+        filteredCommunitySkills={filteredCommunitySkills}
+        communitySearch={communitySearch}
+        setCommunitySearch={setCommunitySearch}
+        selectedSkill={selectedSkill}
+        setSelectedSkill={setSelectedSkill}
+        setDashboardView={setDashboardView}
+        handleClearSwapRequests={handleClearSwapRequests}
+        requests={requests}
+        handleRequestDecision={handleRequestDecision}
+        filteredStudents={filteredStudents}
+        studentSearch={studentSearch}
+        setStudentSearch={setStudentSearch}
+        completedSwaps={completedSwaps}
+        profileCompletion={profileCompletion}
+        loading={loading}
+      />
+    );
+  }
 
   return (
     <div className={`min-vh-100 ${settings.darkMode ? "dark-theme" : "bg-light"}`}>
@@ -1344,6 +1510,279 @@ const profileCompletion =
           </div>
         </div>
       
+    </div>
+  );
+}
+
+function DashboardHome({
+  user,
+  settings,
+  t,
+  showToast,
+  toastMessage,
+  showNotifications,
+  setShowNotifications,
+  notifications,
+  mySkills,
+  setMySkills,
+  skillForm,
+  setSkillForm,
+  handleSkillFieldChange,
+  handleSkillSubmit,
+  handleClearMySkills,
+  skills,
+  filteredCommunitySkills,
+  communitySearch,
+  setCommunitySearch,
+  setSelectedSkill,
+  setDashboardView,
+  handleClearSwapRequests,
+  requests,
+  handleRequestDecision,
+  filteredStudents,
+  studentSearch,
+  setStudentSearch,
+  completedSwaps,
+  profileCompletion,
+  loading,
+}) {
+  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const addRecommendedSkill = (name, category, description) => {
+    const newSkill = { id: `my-skill-${Date.now()}`, name, category, level: 'Intermediate', description };
+    const updatedSkills = [newSkill, ...mySkills];
+    setMySkills(updatedSkills);
+    setSkillForm({ name: '', category: '', level: '', description: '' });
+    localStorage.setItem('skillswap-my-skills', JSON.stringify(updatedSkills));
+    scrollTo('my-skills');
+  };
+
+  return (
+    <div className={`skillswap-dashboard ${settings.darkMode ? 'dark-theme' : ''}`}>
+      {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
+      <header className="dashboard-hero">
+        <div className="dashboard-hero-glow" aria-hidden="true" />
+        <div className="container dashboard-hero-inner">
+          <div>
+            <p className="dashboard-kicker">SKILLSWAP AI</p>
+            <h1>Hello, {user.name || 'Isha'} 👋</h1>
+            <p>Find your next skill or share yours!</p>
+          </div>
+          <button className="dashboard-avatar" aria-label="Open profile" onClick={() => setDashboardView('profile')}>
+            {user.name?.charAt(0).toUpperCase() || 'I'}
+          </button>
+        </div>
+        <div className="container dashboard-search-wrap">
+          <div className="dashboard-search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" placeholder="Search skills, people, or courses..." value={communitySearch} onChange={(event) => setCommunitySearch(event.target.value)} onFocus={() => scrollTo('community-skills')} />
+          </div>
+        </div>
+      </header>
+
+      <main className="container dashboard-content">
+        <section className="skill-match-banner" onClick={() => scrollTo('community-skills')} role="button" tabIndex="0">
+          <div>
+            <span className="dashboard-kicker">AI POWERED</span>
+            <h2>Skill Match</h2>
+            <p>Find perfect skill partners with AI</p>
+            <button className="skill-match-button" onClick={(event) => { event.stopPropagation(); scrollTo('community-skills'); }}>Try Now <span>→</span></button>
+          </div>
+          <div className="skill-match-sparkle" aria-hidden="true">✦</div>
+        </section>
+
+        <section className="quick-actions-section">
+          <div className="dashboard-section-heading"><h2>Quick Actions</h2></div>
+          <div className="quick-actions-grid">
+            <button className="quick-action" onClick={() => setDashboardView('explore')}><span>⌕</span><strong>Browse</strong></button>
+            <button className="quick-action" onClick={() => scrollTo('my-skills')}><span>▦</span><strong>My Skills</strong></button>
+            <button className="quick-action" onClick={() => setShowNotifications(!showNotifications)}><span>♢</span><strong>Notifications</strong></button>
+            <button className="quick-action" onClick={() => setDashboardView('profile')}><span>●</span><strong>Profile</strong></button>
+          </div>
+          {showNotifications && settings.notifications ? <div className="dashboard-notifications">
+            <strong>Notifications</strong>
+            {notifications.length ? notifications.map((item) => <div key={item.id}>{item.text}</div>) : <span>No notifications</span>}
+          </div> : null}
+        </section>
+
+        <section className="recommended-section">
+          <div className="dashboard-section-heading"><h2>Recommended for You</h2><button onClick={() => scrollTo('community-skills')}>View All</button></div>
+          <div className="recommended-grid">
+            {[
+              ['Web Development', 'Learn React, HTML, CSS', '</>'],
+              ['Graphic Design', 'Improve your design skills', '✎'],
+              ['Communication', 'Build your soft skills', '✦'],
+            ].map(([name, subtitle, icon]) => <article className="recommended-card" key={name}>
+              <div className="recommended-icon">{icon}</div>
+              <div><h3>{name}</h3><p>{subtitle}</p></div>
+              <button aria-label={`Add ${name}`} onClick={() => addRecommendedSkill(name, 'Recommended', subtitle)}>+</button>
+            </article>)}
+          </div>
+        </section>
+
+        <section className="dashboard-stats">
+          <article><span>Skills Added</span><strong>{mySkills.length}</strong></article>
+          <article><span>Swap Requests</span><strong>{requests.length}</strong></article>
+          <article><span>Profile Completion</span><strong>{profileCompletion}%</strong></article>
+        </section>
+
+        <section id="my-skills" className="dashboard-panel">
+          <div className="dashboard-section-heading"><div><h2>{t.mySkills}</h2><p>Your skills are ready to share.</p></div><button className="outline-action" onClick={handleClearMySkills} disabled={!mySkills.length}>Clear Skills</button></div>
+          <form className="add-skill-form" onSubmit={handleSkillSubmit}>
+            <input placeholder="Skill name" name="name" value={skillForm.name} onChange={handleSkillFieldChange} required />
+            <select name="level" value={skillForm.level} onChange={handleSkillFieldChange} required><option value="" disabled>Level</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select>
+            <input placeholder="Category" name="category" value={skillForm.category} onChange={handleSkillFieldChange} required />
+            <input placeholder="Short description" name="description" value={skillForm.description} onChange={handleSkillFieldChange} />
+            <button className="primary-action" type="submit">{t.addSkill} +</button>
+          </form>
+          <div className="skill-chip-grid">{mySkills.length ? mySkills.map((skill) => <article className="skill-chip" key={skill.id}><span>{skill.category}</span><h3>{skill.name}</h3><p>{skill.description || 'Ready to share this skill.'}</p><b>{skill.level}</b></article>) : <div className="empty-dashboard-state">Your added skills will appear here.</div>}</div>
+        </section>
+
+        <section id="community-skills" className="dashboard-panel">
+          <div className="dashboard-section-heading"><div><h2>{t.communitySkills}</h2><p>Find students who can teach what you want to learn.</p></div></div>
+          <div className="dashboard-inline-search"><span>⌕</span><input type="search" placeholder="Search skills or student..." value={communitySearch} onChange={(event) => setCommunitySearch(event.target.value)} /></div>
+          <div className="community-grid">{skills.length ? filteredCommunitySkills.map((skill) => <article className="community-card" key={skill.id}><div><span>{skill.category}</span><h3>{skill.name}</h3><p>Offered by {skill.user_name}</p></div><p>{skill.description || 'No extra description provided.'}</p>{skill.user_id !== user.id ? <button className="outline-action" disabled={loading} onClick={() => { setSelectedSkill(skill); setDashboardView('skillDetails'); }}>Request Swap</button> : <small>Your skill</small>}</article>) : <div className="empty-dashboard-state">No skills posted yet.</div>}</div>
+        </section>
+
+        <section id="swap-requests" className="dashboard-panel">
+          <div className="dashboard-section-heading"><h2>{t.swapRequests}</h2><button className="outline-action" onClick={handleClearSwapRequests} disabled={!requests.length}>Clear Requests</button></div>
+          {requests.length ? <div className="request-grid">{requests.map((request) => <article className="request-card" key={request.id}><div><span>{request.requester_name === 'You' ? `TO ${request.target_name}` : `FROM ${request.requester_name}`}</span><h3>{request.requester_name === 'You' ? `Requesting ${request.skill_offered}` : `${request.skill_offered} ↔ ${request.skill_wanted}`}</h3></div><b>{request.status}</b><p>{request.message}</p>{request.status === 'Pending' ? <div><button onClick={() => handleRequestDecision(request.id, 'Accepted')}>Accept</button><button onClick={() => handleRequestDecision(request.id, 'Declined')}>Decline</button></div> : null}</article>)}</div> : <div className="empty-dashboard-state">No swap requests yet.</div>}
+        </section>
+
+        <section className="dashboard-panel">
+          <div className="dashboard-section-heading"><div><h2>{t.students}</h2><p>Meet students in the SkillSwap community.</p></div><div className="dashboard-inline-search compact"><span>⌕</span><input placeholder="Search students or skills" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></div></div>
+          <div className="student-grid">{filteredStudents.map((member) => <article className="student-dashboard-card" key={member.id}><span>{member.department}</span><h3>{member.name}</h3><p>{member.college || 'College not added'}</p><div>{member.skills?.map((skill) => <small key={skill.id}>{skill.name} · {skill.level}</small>)}</div><footer>◷ {member.availability}</footer></article>)}</div>
+        </section>
+      </main>
+
+      <nav className="dashboard-bottom-nav">
+        <button className="active"><span>⌂</span>Home</button>
+        <button onClick={() => setDashboardView('explore')}><span>◎</span>Explore</button>
+        <button onClick={() => setDashboardView('post')}><span>＋</span>Post Skill</button>
+        <button onClick={() => setDashboardView('messages')}><span>◌</span>Messages</button>
+        <button onClick={() => setDashboardView('profile')}><span>●</span>Profile</button>
+      </nav>
+    </div>
+  );
+}
+
+function ScreenBottomNav({ current, onHome, onExplore, onPost, onMessages, onProfile }) {
+  return (
+    <nav className="dashboard-bottom-nav screen-bottom-nav">
+      <button className={current === 'home' ? 'active' : ''} onClick={onHome}><span>⌂</span>Home</button>
+      <button className={current === 'explore' ? 'active' : ''} onClick={onExplore}><span>◎</span>Explore</button>
+      <button className={current === 'post' ? 'active' : ''} onClick={onPost}><span>＋</span>Post Skill</button>
+      <button className={current === 'messages' ? 'active' : ''} onClick={onMessages}><span>◌</span>Messages</button>
+      <button className={current === 'profile' ? 'active' : ''} onClick={onProfile}><span>●</span>Profile</button>
+    </nav>
+  );
+}
+
+function PostSkillScreen({ settings, form, onChange, onModeChange, onImageChange, onSubmit, onBack, onExplore, onMessages, onProfile }) {
+  return (
+    <div className={`post-skill-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <header className="post-skill-header"><div className="container post-skill-header-inner"><button className="screen-icon-button" aria-label="Back to dashboard" onClick={onBack}>←</button><div><span className="dashboard-kicker">SKILLSWAP AI</span><h1>Post Your Skill</h1></div><span className="post-header-mark">✦</span></div></header>
+      <main className="container post-skill-content">
+        <form className="post-skill-card" onSubmit={onSubmit}>
+          <div className="post-mode-toggle" role="tablist" aria-label="Skill post type"><button type="button" className={form.mode === 'teach' ? 'active' : ''} onClick={() => onModeChange('teach')}>I can teach</button><button type="button" className={form.mode === 'learn' ? 'active' : ''} onClick={() => onModeChange('learn')}>I want to learn</button></div>
+          <div className="post-form-intro"><span className="dashboard-kicker">SHARE YOUR KNOWLEDGE</span><h2>{form.mode === 'teach' ? 'What can you teach?' : 'What do you want to learn?'}</h2><p>Help the SkillSwap community find the right match.</p></div>
+          <label>Skill Name<input name="name" value={form.name} onChange={onChange} placeholder="e.g. React Development" required /></label>
+          <label>Description<textarea name="description" value={form.description} onChange={onChange} placeholder="Tell students a little about this skill..." rows="4" required /></label>
+          <label>Category<select name="category" value={form.category} onChange={onChange}><option>Technical</option><option>Creative</option><option>Language</option><option>Business</option><option>Wellness</option></select></label>
+          <label>Add Tags <span>(optional)</span><input name="tags" value={form.tags} onChange={onChange} placeholder="react, frontend, web" /></label>
+          <label className="post-upload">Upload image <span>(optional)</span><input type="file" accept="image/*" onChange={onImageChange} />{form.image ? <img src={form.image} alt="Selected skill preview" /> : <span className="post-upload-placeholder">＋ Choose an image</span>}</label>
+          <button className="post-submit-button" type="submit">Post Skill <span>→</span></button>
+        </form>
+      </main>
+      <ScreenBottomNav current="post" onHome={onBack} onExplore={onExplore} onPost={() => {}} onMessages={onMessages} onProfile={onProfile} />
+    </div>
+  );
+}
+
+function MessagesScreen({ settings, chats, selectedChatId, setSelectedChatId, search, setSearch, draft, setDraft, onSend, onBack, onExplore, onPost, onProfile }) {
+  const messageEndRef = useRef(null);
+  const selectedChat = chats.find((chat) => chat.id === selectedChatId);
+  const filteredChats = chats.filter((chat) => chat.name.toLowerCase().includes(search.trim().toLowerCase()));
+
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedChatId, selectedChat?.messages.length]);
+
+  return (
+    <div className={`messages-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <header className="messages-header"><div className="container messages-header-inner"><button className="screen-icon-button" aria-label="Back to dashboard" onClick={onBack}>←</button><div><span className="dashboard-kicker">SKILLSWAP AI</span><h1>Messages</h1></div><span className="messages-header-mark">◌</span></div></header>
+      <main className={`container messages-content ${selectedChat ? 'chat-open' : ''}`}>
+        <section className="chat-list-panel"><div className="messages-search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chats..." /></div><div className="chat-list">{filteredChats.map((chat) => <button className={`chat-list-item ${selectedChatId === chat.id ? 'active' : ''}`} key={chat.id} onClick={() => setSelectedChatId(chat.id)}><span className="chat-avatar">{chat.avatar}</span><span className="chat-list-copy"><strong>{chat.name}</strong><small>{chat.lastMessage}</small></span><time>{chat.time}</time></button>)}</div></section>
+        {selectedChat ? <section className="chat-window"><div className="chat-window-header"><button className="chat-back-button" onClick={() => setSelectedChatId(null)}>←</button><span className="chat-avatar">{selectedChat.avatar}</span><div><strong>{selectedChat.name}</strong><small>SkillSwap partner</small></div></div><div className="chat-messages">{selectedChat.messages.map((message) => <div className={`chat-bubble-row ${message.from === 'me' ? 'mine' : ''}`} key={message.id}><div className="chat-bubble"><p>{message.text}</p><time>{message.time}</time></div></div>)}<div ref={messageEndRef} /></div><form className="chat-compose" onSubmit={onSend}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message..." aria-label="Message" /><button type="submit" aria-label="Send message">↑</button></form></section> : <section className="chat-empty"><span>◌</span><h2>Select a chat</h2><p>Choose a SkillSwap partner to start messaging.</p></section>}
+      </main>
+      <ScreenBottomNav current="messages" onHome={onBack} onExplore={onExplore} onPost={onPost} onMessages={() => {}} onProfile={onProfile} />
+    </div>
+  );
+}
+
+function ExploreSkillsScreen({ settings, search, setSearch, category, setCategory, skills, onSelectSkill, onBack }) {
+  const categories = ['All', 'Technical', 'Creative', 'Language'];
+  const filteredSkills = skills.filter((skill) => {
+    const matchesCategory = category === 'All' || skill.category === category;
+    const query = search.trim().toLowerCase();
+    const matchesSearch = !query || `${skill.name} ${skill.category}`.toLowerCase().includes(query);
+    return matchesCategory && matchesSearch;
+  });
+
+  return (
+    <div className={`skill-explore-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <header className="skill-explore-header">
+        <div className="container skill-explore-header-inner">
+          <button className="screen-icon-button" aria-label="Back to dashboard" onClick={onBack}>←</button>
+          <div><span className="dashboard-kicker">SKILLSWAP AI</span><h1>Explore Skills</h1></div>
+          <button className="screen-icon-button" aria-label="Open profile" onClick={onBack}>●</button>
+        </div>
+      </header>
+
+      <main className="container skill-explore-content">
+        <div className="explore-search"><span aria-hidden="true">⌕</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search skills..." /></div>
+        <div className="skill-category-chips" role="tablist" aria-label="Skill categories">
+          {categories.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}
+        </div>
+        <div className="explore-title-row"><div><span className="dashboard-kicker">DISCOVER SOMETHING NEW</span><h2>Popular skills</h2></div><span>{filteredSkills.length} skills</span></div>
+        <div className="explore-skill-grid">
+          {filteredSkills.map((skill) => <article className="explore-skill-card" key={skill.id} onClick={() => onSelectSkill(skill)} role="button" tabIndex="0" onKeyDown={(event) => event.key === 'Enter' && onSelectSkill(skill)}>
+            <div className="explore-skill-card-top"><div className="explore-skill-icon">{skill.icon}</div><span className="explore-category-label">{skill.category}</span></div>
+            <h3>{skill.name}</h3>
+            <p>{skill.description}</p>
+            <div className="explore-skill-card-bottom"><span>◉ {skill.students} students</span><button onClick={(event) => { event.stopPropagation(); onSelectSkill(skill); }}>Swap <span>→</span></button></div>
+          </article>)}
+        </div>
+        {!filteredSkills.length ? <div className="empty-dashboard-state">No skills match your search.</div> : null}
+      </main>
+    </div>
+  );
+}
+
+function SkillDetailsScreen({ settings, skill, onBack, onRequestSwap }) {
+  if (!skill) return null;
+  const learnItems = skill.category === 'Technical'
+    ? ['Practical foundations and best practices', 'Build a project with guided feedback', 'Confidence using industry tools']
+    : skill.category === 'Creative'
+      ? ['Creative process and visual thinking', 'Create polished work for your portfolio', 'Feedback from experienced peers']
+      : ['Clearer everyday conversations', 'Confidence in presentations', 'Useful vocabulary and feedback'];
+  const exchangeItems = skill.category === 'Technical' ? ['HTML, CSS, JavaScript', 'Data analysis', 'Project collaboration'] : skill.category === 'Creative' ? ['Brand strategy', 'Content writing', 'Presentation skills'] : ['Public speaking', 'Writing', 'Interview preparation'];
+
+  const shareSkill = async () => {
+    const shareText = `Learn ${skill.name} on SkillSwap AI`;
+    if (navigator.share) await navigator.share({ title: skill.name, text: shareText }).catch(() => {});
+    else if (navigator.clipboard) await navigator.clipboard.writeText(shareText);
+  };
+
+  return (
+    <div className={`skill-details-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+      <header className="skill-details-header"><div className="container skill-details-actions"><button className="screen-icon-button" aria-label="Back to Explore" onClick={onBack}>←</button><button className="screen-icon-button" aria-label="Share skill" onClick={shareSkill}>↗</button></div></header>
+      <main className="container skill-details-content">
+        <div className="skill-details-identity"><div className="skill-details-avatar">{skill.icon}</div><div><span className="explore-category-label">{skill.category}</span><h1>{skill.name}</h1><p>◉ {skill.students} students learning this skill</p></div></div>
+        <section className="skill-details-card"><span className="dashboard-kicker">ABOUT THIS SKILL</span><h2>Grow with the community</h2><p>{skill.description}</p></section>
+        <section className="skill-details-list"><h2>What you'll learn</h2><ul>{learnItems.map((item) => <li key={item}><span>✓</span>{item}</li>)}</ul></section>
+        <section className="skill-details-list"><h2>Looking to exchange</h2><ul>{exchangeItems.map((item) => <li key={item}><span>＋</span>{item}</li>)}</ul></section>
+        <button className="details-request-button" onClick={onRequestSwap}>Request Swap <span>→</span></button>
+      </main>
     </div>
   );
 }

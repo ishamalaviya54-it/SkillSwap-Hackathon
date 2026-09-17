@@ -22,6 +22,7 @@ A beginner-friendly full-stack project for a college hackathon. The app lets stu
 
 - `backend/` - Express API and DB config
 - `frontend/` - React UI
+- `android/` - Native Java/XML Android app with the Home Dashboard screen
 
 ## Setup steps
 
@@ -35,6 +36,10 @@ A beginner-friendly full-stack project for a college hackathon. The app lets stu
 5. Start the frontend:
    - `npm --prefix frontend run dev`
 6. Open the React app at `http://localhost:5173`
+
+## Android Home Dashboard
+
+Open the `android/` folder in Android Studio and run the `app` configuration. The native dashboard starts at `HomeActivity` and uses Java, Android XML, Material components, and a RecyclerView for recommended skills. From a machine with Gradle installed, the debug APK can be built with `gradle :app:assembleDebug` from the `android/` directory.
 
 ## Git commands
 
