@@ -2375,7 +2375,16 @@ function ProfileScreen({ profile, settings, onBack, onSettings, onAccount, onNot
       </header>
       <main className="profile-screen-content">
         <section className="profile-summary">
-          <div className="profile-screen-avatar">IM</div>
+          <div className="profile-screen-avatar">
+  {profile.name
+    ? profile.name
+        .split(' ')
+        .map((word) => word.charAt(0))
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'U'}
+</div>
           <h1>{profile.name || 'Isha Malaviya'}</h1>
           <p>{profile.department || 'iMSC(IT)'} <span>•</span> 3rd Year</p>
           <div className="profile-stats">
