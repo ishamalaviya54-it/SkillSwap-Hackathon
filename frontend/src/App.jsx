@@ -99,6 +99,7 @@ function App() {
   return () => clearTimeout(timer);
 }, []);
   const [dashboardView, setDashboardView] = useState(() => token && user ? 'dashboard' : 'landing');
+  const [completedSwap, setCompletedSwap] = useState(null);
   const [activeTab, setActiveTab] = useState("home");
   const [profile, setProfile] = useState(() => {
   try {
@@ -380,20 +381,61 @@ function App() {
     setShowToast(true);
   };
 
-  const handleSendMessage = (event) => {
-    event.preventDefault();
-    const text = messageDraft.trim();
-    if (!text || !selectedChatId) return;
-    const newMessage = { id: `message-${Date.now()}`, from: 'me', text, time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
-    setChats((previousChats) => {
-      const updatedChats = previousChats.map((chat) => chat.id === selectedChatId
-        ? { ...chat, lastMessage: text, time: 'Now', messages: [...chat.messages, newMessage] }
-        : chat);
-      localStorage.setItem('skillswap-chats', JSON.stringify(updatedChats));
-      return updatedChats;
-    });
-    setMessageDraft('');
+  const handleSendMessage = (e) => {
+  e.preventDefault();
+
+  if (!draft.trim() || !selectedChatId) return;
+
+  const myMessage = {
+    id: Date.now(),
+    from: "me",
+    text: draft,
+    time: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
   };
+
+  const updatedChats = chats.map((chat) =>
+    chat.id === selectedChatId
+      ? {
+          ...chat,
+          lastMessage: draft,
+          time: myMessage.time,
+          messages: [...chat.messages, myMessage],
+        }
+      : chat
+  );
+
+  setChats(updatedChats);
+  setDraft("");
+
+  // Auto Reply after 1 second
+  setTimeout(() => {
+    const replyMessage = {
+      id: Date.now() + 1,
+      from: "partner",
+      text: "Thanks! I received your message. Let's continue our SkillSwap session.",
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === selectedChatId
+          ? {
+              ...chat,
+              lastMessage: replyMessage.text,
+              time: replyMessage.time,
+              messages: [...chat.messages, replyMessage],
+            }
+          : chat
+      )
+    );
+  }, 1000);
+};
 
   const handleRequestSwap = async (selectedSkill, requestDetails = {}) => {
     setLoading(true);
@@ -595,7 +637,33 @@ const handleRequestDecision = (requestId, status) => {
     setDashboardView("activeSwap");
   }
   };
+  const handleCompleteSwap = () => {
+  if (!selectedSkill) return;
 
+  // Swap ne Completed karo
+  const updatedRequests = requests.map((request) =>
+    request.id === selectedSkill.id
+      ? { ...request, status: "Completed" }
+      : request
+  );
+
+  setRequests(updatedRequests);
+
+  localStorage.setItem(
+    "skillswap-swap-requests",
+    JSON.stringify(updatedRequests)
+  );
+
+  // Screen 11 mate swap save karo
+  setCompletedSwap(selectedSkill);
+
+  // Success Toast
+  setToastMessage("🎉 Swap completed successfully!");
+  setShowToast(true);
+
+  // Screen 11 open
+  setDashboardView("rating");
+};
   const handleClearSwapRequests = () => {
     setRequests([]);
     localStorage.setItem('skillswap-swap-requests', JSON.stringify([]));
@@ -1108,6 +1176,62 @@ const profileCompletion =
           : setDashboardView(view)
       }
       onLogout={handleLogout}
+      onComplete={handleCompleteSwap}
+    />
+  );
+}
+  if (dashboardView === "rating") {
+  return (
+    <RatingFeedbackScreen
+      settings={settings}
+      swap={completedSwap || selectedSkill}
+      onBack={() => setDashboardView("activeSwap")}
+      onHome={() => setDashboardView("dashboard")}
+      onBrowse={() => setDashboardView("explore")}
+      onMySwaps={() => setDashboardView("mySwaps")}
+      onProfile={openOwnPublicProfile}
+      onNavigate={(view) =>
+        view === "profile"
+          ? openOwnPublicProfile()
+          : setDashboardView(view)
+      }
+      onLogout={handleLogout}
+    />
+  );
+}
+  if (dashboardView === "users") {
+  return (
+    <AdminDashboardScreen
+      settings={settings}
+      onLogout={handleLogout}
+      defaultTab="users"
+    />
+  );
+}
+if (dashboardView === "skills") {
+  return (
+    <AdminDashboardScreen
+      settings={settings}
+      onLogout={handleLogout}
+      defaultTab="skills"
+    />
+  );
+}
+if (dashboardView === "feedback") {
+  return (
+    <AdminDashboardScreen
+      settings={settings}
+      onLogout={handleLogout}
+      defaultTab="feedback"
+    />
+  );
+}
+if (dashboardView === "reports") {
+  return (
+    <AdminDashboardScreen
+      settings={settings}
+      onLogout={handleLogout}
+      defaultTab="reports"
     />
   );
 }
@@ -1825,6 +1949,80 @@ function DashboardHome({
   loading,
   handleLogout,
 }) {
+  const [dashboardTab, setDashboardTab] = useState("dashboard");
+  const [chatMessages, setChatMessages] = useState([
+  {
+    id: 1,
+    sender: "Riya Shah",
+    text: "Hello! Can we start React session today?",
+    time: "10:30 AM",
+    mine: false,
+  },
+  {
+    id: 2,
+    sender: "You",
+    text: "Yes, I'm available after 3 PM.",
+    time: "10:32 AM",
+    mine: true,
+  },
+]);
+
+const [newMessage, setNewMessage] = useState("");
+const sendMessage = () => {
+  if (!newMessage.trim()) return;
+
+  const myMessage = {
+    id: Date.now(),
+    sender: "You",
+    text: newMessage,
+    time: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    mine: true,
+  };
+
+  setChatMessages((prev) => [...prev, myMessage]);
+
+  const userText = newMessage;
+  setNewMessage("");
+
+  setTimeout(() => {
+    const reply = {
+      id: Date.now() + 1,
+      sender: "Riya Shah",
+      text: getAutoReply(userText),
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      mine: false,
+    };
+
+    setChatMessages((prev) => [...prev, reply]);
+  }, 1200);
+};
+const getAutoReply = (msg) => {
+  const text = msg.toLowerCase();
+
+  if (text.includes("hello") || text.includes("hi")) {
+    return "Hi Isha! 😊 Nice to hear from you.";
+  }
+
+  if (text.includes("react")) {
+    return "Sure! We can practice React together today.";
+  }
+
+  if (text.includes("python")) {
+    return "Tomorrow evening works for Python session.";
+  }
+
+  if (text.includes("thanks")) {
+    return "You're welcome! Happy Skill Swapping. 🌸";
+  }
+
+  return "Okay 👍 I'll get back to you soon.";
+};
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const addRecommendedSkill = (name, category, description) => {
     const newSkill = { id: `my-skill-${Date.now()}`, name, category, level: 'Intermediate', description };
@@ -1838,7 +2036,11 @@ function DashboardHome({
   return (
     <div className={`skillswap-dashboard ${settings.darkMode ? 'dark-theme' : ''}`}>
       {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
-      <AppSidebar current="dashboard" onNavigate={setDashboardView} onLogout={handleLogout} />
+      <AppSidebar
+  current={dashboardTab}
+  onNavigate={setDashboardTab}
+  onLogout={handleLogout}
+/>
       <div className="dashboard-stage">
         <header className="dashboard-hero">
         <div className="dashboard-hero-glow" aria-hidden="true" />
@@ -1934,6 +2136,7 @@ function DashboardHome({
           <div className="dashboard-section-heading"><div><h2>{t.students}</h2><p>Meet students in the SkillSwap community.</p></div><div className="dashboard-inline-search compact"><span>⌕</span><input placeholder="Search students or skills" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></div></div>
           <div className="student-grid">{filteredStudents.map((member) => <article className="student-dashboard-card" key={member.id}>{member.profilePublic === false ? <div className="private-profile-state">🔒<strong>Private Profile</strong><small>This student's profile details are hidden.</small></div> : <><span>{member.department}</span><h3>{member.name}</h3><p>{member.college || 'College not added'}</p><div>{member.skills?.map((skill) => <small key={skill.id}>{skill.name} · {skill.level}</small>)}</div><footer>◷ {member.availability}</footer></>}</article>)}</div>
         </section>
+        
       </main>
       <aside className="dashboard-progress-panel">
         <div className="progress-panel-heading"><span className="dashboard-kicker">YOUR PROGRESS</span><span>↗</span></div>
@@ -1951,15 +2154,19 @@ function DashboardHome({
 function AppSidebar({ current, onNavigate, onLogout }) {
   const [open, setOpen] = useState(false);
   const items = [
-    ['dashboard', '⌂', 'Home'],
-    ['explore', '◎', 'Browse'],
-    ['mySwaps', '↔', 'My Swaps'],
-    ['post', '＋', 'Post'],
-    ['messages', '◌', 'Messages'],
-    ['notifications', '♢', 'Notifications'],
-    ['profile', '●', 'Profile'],
-    ['settings', '⚙', 'Settings'],
-  ];
+  ["dashboard", "🏠", "Dashboard"],
+  ["users", "👥", "Users"],
+  ["skills", "🎯", "Skills"],
+  ["explore", "◎", "Browse"],
+  ["mySwaps", "🔄", "My Swaps"],
+  ["feedback", "⭐", "Feedback"],
+  ["reports", "📊", "Reports"],
+  ["post", "＋", "Post"],
+  ["messages", "💬", "Messages"],
+  ["notifications", "♢", "Notifications"],
+  ["profile", "●", "Profile"],
+  ["settings", "⚙", "Settings"],
+];
 
   return (
     <>
@@ -2526,6 +2733,7 @@ function ActiveSwapScreen({
   onProfile,
   onNavigate,
   onLogout,
+  onComplete,
 }) {
   if (!swap) {
     return (
@@ -2678,20 +2886,17 @@ function ActiveSwapScreen({
 
             </div>
 
-            <div className="active-swap-status">
+            <div className="active-swap-status"> 
               ✓ Swap Active
             </div>
 
             <button
-              type="button"
-              className="active-swap-complete-button"
-              onClick={() => {
-                setToastMessage("Swap completed successfully!");
-                setShowToast(true);
-              }}
-            >
-              Mark Swap Complete
-            </button>
+  type="button"
+  className="active-swap-complete-button"
+  onClick={onComplete}
+>
+  ✅ Mark Swap Complete
+</button>
 
           </section>
 
@@ -2701,4 +2906,94 @@ function ActiveSwapScreen({
     </div>
   );
 }
+function RatingFeedbackScreen({
+  settings,
+  swap,
+  onBack,
+  onHome,
+  onProfile,
+}) {
+  const [rating, setRating] = useState(0);
+  const [feedback, setFeedback] = useState("");
+
+  const submitFeedback = () => {
+  if (rating === 0) {
+    alert("Please select a rating.");
+    return;
+  }
+
+  const feedbackData = {
+    id: Date.now(),
+    partner: swap?.user_name || "Skill Partner",
+    skillOffered: swap?.skill_offered || "React Basics",
+    skillWanted: swap?.skill_wanted || "Photoshop",
+    rating,
+    comment: feedback,
+    date: new Date().toLocaleDateString(),
+  };
+
+  const oldFeedback = JSON.parse(
+    localStorage.getItem("skillswap-feedback") || "[]"
+  );
+
+  localStorage.setItem(
+    "skillswap-feedback",
+    JSON.stringify([feedbackData, ...oldFeedback])
+  );
+
+  onHome();
+};
+
+  return (
+    <div className={`rating-page ${settings.darkMode ? "dark-theme" : ""}`}>
+      <div className="container rating-content">
+
+        <button className="btn btn-light mb-3" onClick={onBack}>
+          ← Back
+        </button>
+
+        <h2 className="text-center mb-3">⭐ Rate Your Swap</h2>
+
+        <p className="text-center">
+          Rate your experience with{" "}
+          <strong>{swap?.user_name || "Skill Partner"}</strong>
+        </p>
+
+        <div className="rating-stars text-center mb-4">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <span
+              key={star}
+              onClick={() => setRating(star)}
+              style={{
+                fontSize: "38px",
+                cursor: "pointer",
+                color: star <= rating ? "#FFC107" : "#D1D5DB",
+                margin: "0 6px",
+              }}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+
+        <textarea
+          className="form-control mb-3"
+          rows="5"
+          placeholder="Write your feedback..."
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+        />
+
+        <button
+          className="btn btn-primary w-100"
+          onClick={submitFeedback}
+        >
+          Submit Feedback
+        </button>
+
+      </div>
+    </div>
+  );
+}
+
 export default App;

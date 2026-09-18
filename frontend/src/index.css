@@ -1263,3 +1263,308 @@ button, a { transition: all 0.2s ease; }
     transform: rotate(90deg);
   }
 }
+/* ---------- Screen 12 Admin Dashboard ---------- */
+
+.admin-page{
+  min-height:100vh;
+  background:#F5F8FF;
+}
+
+.admin-card{
+  background:#fff;
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+  margin-bottom:20px;
+}
+
+.admin-card h3{
+  color:#4F46E5;
+  font-weight:700;
+}
+
+.feedback-item{
+  padding:10px 0;
+}
+
+.feedback-item p{
+  margin-bottom:8px;
+}
+/* SCREEN 12 ADMIN DASHBOARD */
+
+.admin-page{
+  display:flex;
+  min-height:100vh;
+  background:#F3F6FF;
+}
+
+.admin-sidebar{
+  width:240px;
+  background:linear-gradient(180deg,#6C63FF,#3B82F6);
+  color:#fff;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  position:fixed;
+  height:100vh;
+}
+
+.logo{
+  text-align:center;
+  margin-bottom:25px;
+}
+
+.admin-sidebar button{
+  background:none;
+  border:none;
+  color:#fff;
+  text-align:left;
+  padding:12px 15px;
+  border-radius:10px;
+  margin-bottom:8px;
+  font-size:15px;
+}
+
+.admin-sidebar button:hover{
+  background:rgba(255,255,255,.2);
+}
+
+.logout-btn{
+  margin-top:auto;
+  background:#EF4444!important;
+}
+
+.admin-content{
+  margin-left:240px;
+  width:100%;
+  padding:30px;
+}
+
+.admin-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:25px;
+}
+
+.search-box{
+  width:260px;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ddd;
+}
+
+.card-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:20px;
+}
+
+.admin-card{
+  background:#fff;
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+.feedback-card{
+  background:#F8FAFF;
+  border-radius:12px;
+  padding:15px;
+  margin-top:12px;
+}
+
+.skill-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px;
+  border-bottom:1px solid #eee;
+}
+
+.stars{
+  color:#F59E0B;
+  margin:5px 0;
+}
+
+@media(max-width:768px){
+  .admin-sidebar{
+    width:80px;
+  }
+
+  .admin-sidebar button{
+    font-size:0;
+  }
+
+  .admin-content{
+    margin-left:80px;
+    padding:15px;
+  }
+
+  .search-box{
+    width:150px;
+  }
+}
+/* ================= ADMIN DASHBOARD ================= */
+
+.admin-page{
+  display:flex;
+  min-height:100vh;
+  background:#f4f7fc;
+}
+
+/* LEFT SIDEBAR */
+
+.admin-sidebar{
+  width:240px;
+  background:linear-gradient(180deg,#1d4ed8,#2563eb);
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  color:white;
+}
+
+.admin-logo{
+  font-size:24px;
+  font-weight:bold;
+  margin-bottom:25px;
+}
+
+.admin-sidebar button{
+  background:none;
+  border:none;
+  color:white;
+  padding:12px 15px;
+  margin-bottom:8px;
+  border-radius:10px;
+  text-align:left;
+  cursor:pointer;
+  font-size:15px;
+  transition:0.3s;
+}
+
+.admin-sidebar button:hover{
+  background:rgba(255,255,255,.2);
+}
+
+.logout-btn{
+  margin-top:auto;
+  background:#dc2626 !important;
+}
+
+/* RIGHT CONTENT */
+
+.admin-content{
+  flex:1;
+  padding:30px;
+}
+
+.admin-content h2{
+  color:#1e3a8a;
+  font-weight:bold;
+}
+
+.admin-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:20px;
+  margin-top:25px;
+}
+
+.admin-card{
+  background:white;
+  padding:20px;
+  border-radius:18px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+.admin-card h5{
+  color:#64748b;
+  margin-bottom:10px;
+}
+
+.admin-card h2{
+  color:#2563eb;
+}
+
+/* TABLE */
+
+.admin-section{
+  margin-top:25px;
+  background:white;
+  padding:20px;
+  border-radius:18px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+.admin-section table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.admin-section th{
+  background:#2563eb;
+  color:white;
+  padding:10px;
+}
+
+.admin-section td{
+  padding:10px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+/* FEEDBACK CARD */
+
+.feedback-card{
+  background:#eef4ff;
+  border-left:5px solid #2563eb;
+  border-radius:12px;
+  padding:15px;
+  margin:12px 0;
+}
+.chat-box{
+  height:350px;
+  overflow-y:auto;
+  padding:15px;
+  background:#f8f9fa;
+  border-radius:15px;
+  margin-bottom:15px;
+}
+
+.my-message{
+  background:#0d6efd;
+  color:white;
+  padding:10px;
+  border-radius:12px;
+  margin:10px 0;
+  margin-left:auto;
+  width:70%;
+}
+
+.other-message{
+  background:#e9ecef;
+  padding:10px;
+  border-radius:12px;
+  margin:10px 0;
+  width:70%;
+}
+
+.chat-input-area{
+  display:flex;
+  gap:10px;
+}
+
+.chat-input-area input{
+  flex:1;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ccc;
+}
+
+.chat-input-area button{
+  padding:12px 18px;
+  border:none;
+  border-radius:10px;
+  background:#0d6efd;
+  color:white;
+}
