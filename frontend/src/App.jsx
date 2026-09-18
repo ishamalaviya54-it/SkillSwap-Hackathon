@@ -171,6 +171,7 @@ function App() {
   const [selectedChatId, setSelectedChatId] = useState(null);
   const [chatSearch, setChatSearch] = useState('');
   const [messageDraft, setMessageDraft] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -380,27 +381,29 @@ function App() {
     setToastMessage('Skill posted successfully!');
     setShowToast(true);
   };
-
-  const handleSendMessage = (e) => {
+  
+ const handleSendMessage = (e) => {
   e.preventDefault();
 
-  if (!draft.trim() || !selectedChatId) return;
+  if (!messageDraft.trim() || !selectedChatId) return;
 
   const myMessage = {
     id: Date.now(),
     from: "me",
-    text: draft,
+    text: messageDraft,
     time: new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     }),
   };
 
+  const currentMessage = messageDraft;
+
   const updatedChats = chats.map((chat) =>
     chat.id === selectedChatId
       ? {
           ...chat,
-          lastMessage: draft,
+          lastMessage: currentMessage,
           time: myMessage.time,
           messages: [...chat.messages, myMessage],
         }
@@ -408,22 +411,38 @@ function App() {
   );
 
   setChats(updatedChats);
-  setDraft("");
+  localStorage.setItem("skillswap-chats", JSON.stringify(updatedChats));
 
-  // Auto Reply after 1 second
+  setMessageDraft("");
+  setIsTyping(true);
+
   setTimeout(() => {
+    let replyText = "Thanks! I received your message. 😊";
+
+    const msg = currentMessage.toLowerCase();
+
+    if (msg.includes("hello") || msg.includes("hi")) {
+      replyText = "Hi! 👋 Nice to connect with you on SkillSwap.";
+    } else if (msg.includes("react")) {
+      replyText = "Sure! I can help you learn React Basics tomorrow.";
+    } else if (msg.includes("python")) {
+      replyText = "Great! Let's schedule a Python session.";
+    } else if (msg.includes("java")) {
+      replyText = "Java is one of my favorite skills. Let's practice together!";
+    }
+
     const replyMessage = {
       id: Date.now() + 1,
-      from: "partner",
-      text: "Thanks! I received your message. Let's continue our SkillSwap session.",
+      from: "them",
+      text: replyText,
       time: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       }),
     };
 
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
+    setChats((prevChats) => {
+      const newChats = prevChats.map((chat) =>
         chat.id === selectedChatId
           ? {
               ...chat,
@@ -432,11 +451,15 @@ function App() {
               messages: [...chat.messages, replyMessage],
             }
           : chat
-      )
-    );
+      );
+
+      localStorage.setItem("skillswap-chats", JSON.stringify(newChats));
+      return newChats;
+    });
+
+    setIsTyping(false);
   }, 1000);
 };
-
   const handleRequestSwap = async (selectedSkill, requestDetails = {}) => {
     setLoading(true);
     setError('');
@@ -1082,22 +1105,23 @@ const profileCompletion =
   if (dashboardView === 'messages') {
     return (
       <MessagesScreen
-        settings={settings}
-        chats={chats}
-        selectedChatId={selectedChatId}
-        setSelectedChatId={setSelectedChatId}
-        search={chatSearch}
-        setSearch={setChatSearch}
-        draft={messageDraft}
-        setDraft={setMessageDraft}
-        onSend={handleSendMessage}
-        onBack={() => setDashboardView('dashboard')}
-        onExplore={() => setDashboardView('explore')}
-        onPost={() => setDashboardView('post')}
-        onProfile={() => setDashboardView('profile')}
-        onNavigate={setDashboardView}
-        onLogout={handleLogout}
-      />
+  settings={settings}
+  chats={chats}
+  selectedChatId={selectedChatId}
+  setSelectedChatId={setSelectedChatId}
+  search={chatSearch}
+  setSearch={setChatSearch}
+  draft={messageDraft}
+  setDraft={setMessageDraft}
+  onSend={handleSendMessage}
+  isTyping={isTyping}
+  onBack={() => setDashboardView("dashboard")}
+  onExplore={() => setDashboardView("explore")}
+  onPost={() => setDashboardView("post")}
+  onProfile={openOwnPublicProfile}
+  onNavigate={(view) => setDashboardView(view)}
+  onLogout={handleLogout}
+/>
     );
   }
 
@@ -1199,42 +1223,7 @@ const profileCompletion =
     />
   );
 }
-  if (dashboardView === "users") {
-  return (
-    <AdminDashboardScreen
-      settings={settings}
-      onLogout={handleLogout}
-      defaultTab="users"
-    />
-  );
-}
-if (dashboardView === "skills") {
-  return (
-    <AdminDashboardScreen
-      settings={settings}
-      onLogout={handleLogout}
-      defaultTab="skills"
-    />
-  );
-}
-if (dashboardView === "feedback") {
-  return (
-    <AdminDashboardScreen
-      settings={settings}
-      onLogout={handleLogout}
-      defaultTab="feedback"
-    />
-  );
-}
-if (dashboardView === "reports") {
-  return (
-    <AdminDashboardScreen
-      settings={settings}
-      onLogout={handleLogout}
-      defaultTab="reports"
-    />
-  );
-}
+  
   if (dashboardView === 'mySwaps') {
     return (
       <MySwapsScreen
@@ -2038,7 +2027,23 @@ const getAutoReply = (msg) => {
       {showToast ? <div className="toast-popup">{toastMessage}</div> : null}
       <AppSidebar
   current={dashboardTab}
-  onNavigate={setDashboardTab}
+  onNavigate={(view) => {
+    setDashboardTab(view);
+
+    if (
+  view === "explore" ||
+  view === "mySwaps" ||
+  view === "messages" ||
+  view === "notifications" ||
+  view === "profile" ||
+  view === "settings" ||
+  view === "post"
+) {
+  setDashboardView(view);
+} else {
+  setDashboardTab(view);   // feedback, users, skills, reports
+}
+  }}
   onLogout={handleLogout}
 />
       <div className="dashboard-stage">
@@ -2064,6 +2069,8 @@ const getAutoReply = (msg) => {
 
       <div className="dashboard-layout">
       <main className="container dashboard-content">
+        {dashboardTab === "dashboard" && (
+  <>
         <section className="skill-match-banner" onClick={() => scrollTo('community-skills')} role="button" tabIndex="0">
           <div>
             <span className="dashboard-kicker">AI POWERED</span>
@@ -2102,14 +2109,116 @@ const getAutoReply = (msg) => {
             </article>)}
           </div>
         </section>
-
+        
+        
         <section className="dashboard-stats">
           <article><span>Skills Added</span><strong>{mySkills.length}</strong></article>
           <article><span>Swap Requests</span><strong>{requests.length}</strong></article>
           <article><span>Profile Completion</span><strong>{profileCompletion}%</strong></article>
         </section>
+         </>
+)}
 
-        <section id="my-skills" className="dashboard-panel">
+          {dashboardTab === "users" && (
+  <section className="dashboard-panel">
+    <div className="dashboard-section-heading">
+      <h2>👥 Users</h2>
+    </div>
+
+    <div className="student-grid">
+      {filteredStudents.map((student) => (
+        <article className="student-dashboard-card" key={student.id}>
+          <h3>{student.name}</h3>
+          <p>{student.college}</p>
+          <p>{student.department}</p>
+          <p>{student.availability}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+)}
+
+{dashboardTab === "skills" && (
+  <section className="dashboard-panel">
+    <div className="dashboard-section-heading">
+      <h2>🎯 Skills</h2>
+    </div>
+
+    <div className="community-grid">
+      {skills.map((skill) => (
+        <article className="community-card" key={skill.id}>
+          <span>{skill.category}</span>
+          <h3>{skill.name}</h3>
+          <p>Offered by {skill.user_name}</p>
+          <p>{skill.description}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+)}
+
+{dashboardTab === "feedback" && (
+  <section className="dashboard-panel">
+    <div className="dashboard-section-heading">
+      <h2>⭐ User Feedback</h2>
+    </div>
+
+    {JSON.parse(localStorage.getItem("skillswap-feedback") || "[]").length === 0 ? (
+      <p>No feedback available.</p>
+    ) : (
+      JSON.parse(localStorage.getItem("skillswap-feedback") || "[]").map((item) => (
+        <div key={item.id} className="feedback-card">
+          <h4>{item.partner}</h4>
+          <p>{"⭐".repeat(item.rating)}</p>
+          <p><b>{item.skillOffered}</b> ↔ <b>{item.skillWanted}</b></p>
+          <p>{item.comment}</p>
+          <small>{item.date}</small>
+        </div>
+      ))
+    )}
+  </section>
+)}
+
+{dashboardTab === "reports" && (
+  <section className="dashboard-panel">
+    <div className="dashboard-section-heading">
+      <h2>📊 Reports</h2>
+    </div>
+
+    <div className="dashboard-stats">
+      <article>
+        <span>Total Users</span>
+        <strong>{filteredStudents.length}</strong>
+      </article>
+
+      <article>
+        <span>Total Skills</span>
+        <strong>{skills.length}</strong>
+      </article>
+
+      <article>
+        <span>My Skills</span>
+        <strong>{mySkills.length}</strong>
+      </article>
+
+      <article>
+        <span>Total Swap Requests</span>
+        <strong>{requests.length}</strong>
+      </article>
+
+      <article>
+        <span>Completed Swaps</span>
+        <strong>{completedSwaps}</strong>
+      </article>
+
+      <article>
+        <span>Total Feedback</span>
+        <strong>{JSON.parse(localStorage.getItem("skillswap-feedback") || "[]").length}</strong>
+      </article>
+    </div>
+  </section>
+)}
+          <section id="my-skills" className="dashboard-panel">
           <div className="dashboard-section-heading"><div><h2>{t.mySkills}</h2><p>Your skills are ready to share.</p></div><button className="outline-action" onClick={handleClearMySkills} disabled={!mySkills.length}>Clear Skills</button></div>
           <form className="add-skill-form" onSubmit={handleSkillSubmit}>
             <input placeholder="Skill name" name="name" value={skillForm.name} onChange={handleSkillFieldChange} required />
@@ -2136,7 +2245,7 @@ const getAutoReply = (msg) => {
           <div className="dashboard-section-heading"><div><h2>{t.students}</h2><p>Meet students in the SkillSwap community.</p></div><div className="dashboard-inline-search compact"><span>⌕</span><input placeholder="Search students or skills" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></div></div>
           <div className="student-grid">{filteredStudents.map((member) => <article className="student-dashboard-card" key={member.id}>{member.profilePublic === false ? <div className="private-profile-state">🔒<strong>Private Profile</strong><small>This student's profile details are hidden.</small></div> : <><span>{member.department}</span><h3>{member.name}</h3><p>{member.college || 'College not added'}</p><div>{member.skills?.map((skill) => <small key={skill.id}>{skill.name} · {skill.level}</small>)}</div><footer>◷ {member.availability}</footer></>}</article>)}</div>
         </section>
-        
+         
       </main>
       <aside className="dashboard-progress-panel">
         <div className="progress-panel-heading"><span className="dashboard-kicker">YOUR PROGRESS</span><span>↗</span></div>
@@ -2175,7 +2284,19 @@ function AppSidebar({ current, onNavigate, onLogout }) {
       <aside className={`app-sidebar ${open ? 'open' : ''}`}>
         <div className="dashboard-sidebar-brand"><span>✦</span><strong>SkillSwap <em>AI</em></strong><button className="sidebar-close" aria-label="Close navigation" onClick={() => setOpen(false)}>×</button></div>
         <nav className="dashboard-sidebar-nav" aria-label="Application navigation">
-          {items.map(([view, icon, label]) => <button key={view} className={current === view ? 'active' : ''} onClick={() => { onNavigate(view); setOpen(false); }}><span>{icon}</span>{label}</button>)}
+        {items.map(([view, icon, label]) => (
+  <button
+    key={view}
+    className={current === view ? "active" : ""}
+    onClick={() => {
+      onNavigate(view);
+      setOpen(false);
+    }}
+  >
+    <span>{icon}</span>
+    {label}
+  </button>
+))}       
         </nav>
         <button className="dashboard-sidebar-logout" onClick={onLogout}>↪ Log out</button>
       </aside>
@@ -2467,8 +2588,24 @@ function PostSkillScreen({ settings, form, onChange, onModeChange, onImageChange
   );
 }
 
-function MessagesScreen({ settings, chats, selectedChatId, setSelectedChatId, search, setSearch, draft, setDraft, onSend, onBack, onExplore, onPost, onProfile, onNavigate, onLogout }) {
-  const messageEndRef = useRef(null);
+function MessagesScreen({
+  settings,
+  chats,
+  selectedChatId,
+  setSelectedChatId,
+  search,
+  setSearch,
+  draft,
+  setDraft,
+  onSend,
+  isTyping,
+  onBack,
+  onExplore,
+  onPost,
+  onProfile,
+  onNavigate,
+  onLogout,
+}) {  const messageEndRef = useRef(null);
   const selectedChat = chats.find((chat) => chat.id === selectedChatId);
   const filteredChats = chats.filter((chat) => chat.name.toLowerCase().includes(search.trim().toLowerCase()));
 
@@ -2481,7 +2618,7 @@ function MessagesScreen({ settings, chats, selectedChatId, setSelectedChatId, se
       <header className="messages-header"><div className="container messages-header-inner"><button className="screen-icon-button" aria-label="Back to dashboard" onClick={onBack}>←</button><div><span className="dashboard-kicker">SKILLSWAP AI</span><h1>Messages</h1></div><span className="messages-header-mark">◌</span></div></header>
       <main className={`container messages-content ${selectedChat ? 'chat-open' : ''}`}>
         <section className="chat-list-panel"><div className="messages-search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chats..." /></div><div className="chat-list">{filteredChats.map((chat) => <button className={`chat-list-item ${selectedChatId === chat.id ? 'active' : ''}`} key={chat.id} onClick={() => setSelectedChatId(chat.id)}><span className="chat-avatar">{chat.avatar}</span><span className="chat-list-copy"><strong>{chat.name}</strong><small>{chat.lastMessage}</small></span><time>{chat.time}</time></button>)}</div></section>
-        {selectedChat ? <section className="chat-window"><div className="chat-window-header"><button className="chat-back-button" onClick={() => setSelectedChatId(null)}>←</button><span className="chat-avatar">{selectedChat.avatar}</span><div><strong>{selectedChat.name}</strong><small>SkillSwap partner</small></div></div><div className="chat-messages">{selectedChat.messages.map((message) => <div className={`chat-bubble-row ${message.from === 'me' ? 'mine' : ''}`} key={message.id}><div className="chat-bubble"><p>{message.text}</p><time>{message.time}</time></div></div>)}<div ref={messageEndRef} /></div><form className="chat-compose" onSubmit={onSend}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message..." aria-label="Message" /><button type="submit" aria-label="Send message">↑</button></form></section> : <section className="chat-empty"><span>◌</span><h2>Select a chat</h2><p>Choose a SkillSwap partner to start messaging.</p></section>}
+        {selectedChat ? <section className="chat-window"><div className="chat-window-header"><button className="chat-back-button" onClick={() => setSelectedChatId(null)}>←</button><span className="chat-avatar">{selectedChat.avatar}</span><div><strong>{selectedChat.name}</strong><small>{isTyping ? "Typing..." : "🟢 Online"}</small></div></div><div className="chat-messages">{selectedChat.messages.map((message) => <div className={`chat-bubble-row ${message.from === 'me' ? 'mine' : ''}`} key={message.id}><div className="chat-bubble"><p>{message.text}</p><time>{message.time}</time></div></div>)}<div ref={messageEndRef} /></div><form className="chat-compose" onSubmit={onSend}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message..." aria-label="Message" /><button type="submit" aria-label="Send message">↑</button></form></section> : <section className="chat-empty"><span>◌</span><h2>Select a chat</h2><p>Choose a SkillSwap partner to start messaging.</p></section>}
       </main>
       <AppSidebar current="messages" onNavigate={onNavigate} onLogout={onLogout} />
     </div>
@@ -2942,7 +3079,7 @@ function RatingFeedbackScreen({
   );
 
   onHome();
-};
+  };
 
   return (
     <div className={`rating-page ${settings.darkMode ? "dark-theme" : ""}`}>
