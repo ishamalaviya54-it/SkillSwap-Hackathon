@@ -1125,19 +1125,20 @@ const profileCompletion =
     );
   }
 
-  if (dashboardView === 'notifications') {
-    return (
-      <NotificationsScreen
-        settings={settings}
-        onBack={() => setDashboardView('dashboard')}
-        onExplore={() => setDashboardView('explore')}
-        onPost={() => setDashboardView('post')}
-        onProfile={() => setDashboardView('profile')}
-        onNavigate={setDashboardView}
-        onLogout={handleLogout}
-      />
-    );
-  }
+  if (dashboardView === "notifications") {
+  return (
+    <NotificationsScreen
+      settings={settings}
+      notifications={notifications}
+      onBack={() => setDashboardView("dashboard")}
+      onExplore={() => setDashboardView("explore")}
+      onPost={() => setDashboardView("post")}
+      onProfile={() => setDashboardView("profile")}
+      onNavigate={setDashboardView}
+      onLogout={handleLogout}
+    />
+  );
+}
 
   if (dashboardView === 'skillDetails') {
     return (
@@ -2634,47 +2635,73 @@ function MessagesScreen({
   );
 }
 
-function NotificationsScreen({ settings, onBack, onExplore, onPost, onProfile, onNavigate, onLogout }) {
-  const [filter, setFilter] = useState('All');
-  const filters = ['All', 'Swap Requests', 'Messages', 'System'];
-  const items = [
-    { id: 1, filter: 'All', kind: 'like', initials: 'AP', name: 'Aarav Patel', action: 'liked your post', skill: 'UI/UX Design', time: '15m', unread: true },
-    { id: 2, filter: 'All', kind: 'comment', initials: 'NS', name: 'Neha Soni', action: 'commented on your post', skill: 'Python Programming', time: '1h', unread: true },
-    { id: 3, filter: 'System', kind: 'system', initials: '✦', name: 'System Update', action: 'New feature: AI Skill Match', time: '2h', unread: false },
-    { id: 4, filter: 'Messages', kind: 'message', initials: 'PD', name: 'Pooja Desai', action: 'sent a message', skill: 'English Speaking', time: '3h', unread: false },
-  ];
-  const visibleItems = filter === 'All' ? items : items.filter((item) => item.filter === filter);
+function NotificationsScreen({
+  settings,
+  notifications = [],
+  onBack,
+  onNavigate,
+  onLogout,
+}) {
+  const [filter, setFilter] = useState("All");
+
+  const filters = ["All", "Swap Requests", "Messages", "System"];
+
+  const items = notifications.map((item) => {
+    let category = "System";
+
+    if (item.text.includes("Swap")) category = "Swap Requests";
+    else if (
+      item.text.includes("message") ||
+      item.text.includes("Message")
+    ) category = "Messages";
+
+    return {
+      ...item,
+      filter: category,
+    };
+  });
+
+  const visibleItems =
+    filter === "All"
+      ? items
+      : items.filter((item) => item.filter === filter);
 
   return (
-    <div className={`notifications-page ${settings.darkMode ? 'dark-theme' : ''}`}>
+    <div className={`notifications-page ${settings.darkMode ? "dark-theme" : ""}`}>
       <header className="notifications-header">
-        <div className="container notifications-header-inner">
-          <button className="notifications-back" aria-label="Back to dashboard" onClick={onBack}>←</button>
-          <h1>Notifications</h1>
-          <span className="notifications-header-dot" aria-hidden="true" />
-        </div>
+        <button onClick={onBack}>← Back</button>
+        <h2>Notifications</h2>
       </header>
-      <main className="container notifications-content">
-        <div className="notification-tabs" role="tablist" aria-label="Notification filters">
-          {filters.map((item) => <button key={item} role="tab" aria-selected={filter === item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>{item}</button>)}
-        </div>
-        <section className="notification-list" aria-label={`${filter} notifications`}>
-          {visibleItems.map((item) => (
-            <article className={`notification-card ${item.unread ? 'unread' : ''}`} key={item.id}>
-              <div className={`notification-avatar ${item.kind}`}>{item.initials}</div>
-              <div className="notification-copy">
-                <p><strong>{item.name}</strong> {item.action}</p>
-                {item.skill ? <span className="notification-skill">Skill: {item.skill}</span> : null}
-                <small>{item.kind === 'system' ? item.action : item.skill}</small>
-              </div>
-              <time>{item.time}</time>
-              {item.unread ? <span className="notification-unread" aria-label="Unread" /> : null}
-            </article>
-          ))}
-          {!visibleItems.length ? <div className="notification-empty">No notifications in this view.</div> : null}
-        </section>
-      </main>
-      <AppSidebar current="notifications" onNavigate={onNavigate} onLogout={onLogout} />
+
+      <div className="notification-tabs">
+        {filters.map((tab) => (
+          <button
+            key={tab}
+            className={filter === tab ? "active" : ""}
+            onClick={() => setFilter(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      <div className="notification-list">
+        {visibleItems.length === 0 ? (
+          <p>No notifications available.</p>
+        ) : (
+          visibleItems.map((item) => (
+            <div key={item.id} className="notification-card">
+              <p>{item.text}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      <AppSidebar
+        current="notifications"
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      />
     </div>
   );
 }
