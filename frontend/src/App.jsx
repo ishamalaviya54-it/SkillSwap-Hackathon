@@ -98,7 +98,7 @@ function App() {
 
   return () => clearTimeout(timer);
 }, []);
-  const [dashboardView, setDashboardView] = useState(() => token && user ? 'dashboard' : 'landing');
+  const [dashboardView, setDashboardView] = useState(() =>token && user ? "dashboard" : "auth");
   const [completedSwap, setCompletedSwap] = useState(null);
   const [activeTab, setActiveTab] = useState("home");
   const [profile, setProfile] = useState(() => {
@@ -834,7 +834,7 @@ const profileCompletion =
     setRequests([]);
     setForm(initialForm);
     setAuthMode('login');
-    setDashboardView('landing');
+    setDashboardView('auth');
     setError('');
     setSuccess('');
   };
@@ -849,46 +849,45 @@ const profileCompletion =
   );
 }
   if (!token || !user) {
-    if (dashboardView === 'landing') {
-      return (
-        <LandingScreen
-          onHome={() => setDashboardView('landing')}
-          onBrowse={(query = '') => {
-            setExploreSearch(query);
-            setExploreCategory('All');
-            setDashboardView('explore');
-          }}
-          onLogin={() => {
-            setAuthMode('login');
-            setDashboardView('auth');
-          }}
-          onRegister={() => {
-            setAuthMode('register');
-            setDashboardView('auth');
-          }}
-        />
-      );
-    }
+    
 
     if (dashboardView === 'explore') {
-      return (
-        <ExploreSkillsScreen
-          settings={settings}
-          search={exploreSearch}
-          setSearch={setExploreSearch}
-          category={exploreCategory}
-          setCategory={setExploreCategory}
-          users={users}
-          onViewProfile={openStudentProfile}
-          onRequestSwap={openStudentRequest}
-          onBack={() => setDashboardView('landing')}
-          onHome={() => setDashboardView('landing')}
-          onMySkills={() => setDashboardView('landing')}
-          onNavigate={setDashboardView}
-          onLogout={handleLogout}
-        />
-      );
-    }
+
+  return (
+
+    <ExploreSkillsScreen
+
+      settings={settings}
+
+      search={exploreSearch}
+
+      setSearch={setExploreSearch}
+
+      category={exploreCategory}
+
+      setCategory={setExploreCategory}
+
+      users={users}
+
+      onViewProfile={openStudentProfile}
+
+      onRequestSwap={openStudentRequest}
+
+      onBack={() => setDashboardView('dashboard')}
+
+      onHome={() => setDashboardView('dashboard')}
+
+      onMySkills={() => setDashboardView('dashboard')}
+
+      onNavigate={setDashboardView}
+
+      onLogout={handleLogout}
+
+    />
+
+  );
+
+}
 
     return (
       <main className="auth-page">
@@ -1313,21 +1312,28 @@ const profileCompletion =
 }
   if (dashboardView === 'settings') {
   return (
-      <SettingsScreen
-        settings={settings}
-        showToast={showToast}
-        toastMessage={toastMessage}
-        onBack={() => setDashboardView('profile')}
-        onSettingsChange={handleSettingsChange}
-        onSettingsSave={handleSettingsSave}
-        onLogout={handleLogout}
-        onHome={() => setDashboardView('dashboard')}
-        onExplore={() => setDashboardView('explore')}
-        onPost={() => setDashboardView('post')}
-        onMessages={() => setDashboardView('messages')}
-        onProfile={() => setDashboardView('profile')}
-        onNavigate={setDashboardView}
-      />
+    <SettingsScreen
+      settings={settings}
+      showToast={showToast}
+      toastMessage={toastMessage}
+      onBack={() => setDashboardView('profile')}
+      onSettingsChange={handleSettingsChange}
+      onSettingsSave={handleSettingsSave}
+      onLogout={handleLogout}
+      onHome={() => setDashboardView('dashboard')}
+      onExplore={() => setDashboardView('explore')}
+      onPost={() => setDashboardView('post')}
+      onMessages={() => setDashboardView('messages')}
+      onProfile={() => setDashboardView('profile')}
+
+      onAccount={() => setDashboardView('account')}
+      onNotifications={() => setDashboardView('notifications')}
+      onPrivacy={() => setDashboardView('privacy')}
+      onHelp={() => setDashboardView('help')}
+      onAbout={() => setDashboardView('about')}
+
+      onNavigate={setDashboardView}
+    />
   );
 }
 
@@ -2444,8 +2450,26 @@ function ProfileScreen({ profile, settings, onBack, onSettings, onAccount, onNot
     </div>
   );
 }
-
-function SettingsScreen({ settings, showToast, toastMessage, onBack, onSettingsChange, onSettingsSave, onLogout, onHome, onExplore, onPost, onMessages, onProfile, onNavigate }) {
+function SettingsScreen({
+  settings,
+  showToast,
+  toastMessage,
+  onBack,
+  onSettingsChange,
+  onSettingsSave,
+  onLogout,
+  onHome,
+  onExplore,
+  onPost,
+  onMessages,
+  onProfile,
+  onNavigate,
+  onAccount,
+  onNotifications,
+  onPrivacy,
+  onHelp,
+  onAbout
+}) {
   const [notificationsOn, setNotificationsOn] = useState(settings.notifications);
   const rows = [
     { label: 'Account', icon: '◯', type: 'link' },
@@ -2472,16 +2496,53 @@ function SettingsScreen({ settings, showToast, toastMessage, onBack, onSettingsC
       </header>
       <main className="settings-screen-content">
         <section className="settings-list" aria-label="Settings">
-          {rows.map((row) => <div className="settings-row" key={row.label}>
-            <span className="settings-row-icon" aria-hidden="true">{row.icon}</span>
-            <span className="settings-row-label">{row.label}</span>
-            {row.type === 'toggle' ? <label className="settings-toggle" aria-label={`${row.label} toggle`}>
-              <input type="checkbox" name={row.name} checked={row.checked} onChange={(event) => handleToggle(event, row)} />
-              <span />
-            </label> : row.type === 'language' ? <select className="settings-language-select" name="language" value={settings.language} onChange={onSettingsChange} aria-label="Language">
-              <option>English</option><option>Hindi</option><option>Gujarati</option>
-            </select> : <span className={`settings-row-action ${row.detail ? 'detail' : 'chevron'}`}>{row.detail || '›'}</span>}
-          </div>)}
+          {rows.map((row) => (
+  <div
+    className="settings-row"
+    key={row.label}
+    onClick={() => {
+      if (row.label === "Account") onAccount();
+      if (row.label === "Notifications") onNotifications();
+      if (row.label === "Privacy & Security") onPrivacy();
+      if (row.label === "Help & Support") onHelp();
+      if (row.label === "About") onAbout();
+    }}
+    style={{ cursor: row.type === "link" ? "pointer" : "default" }}
+  >
+    <span className="settings-row-icon" aria-hidden="true">
+      {row.icon}
+    </span>
+
+    <span className="settings-row-label">
+      {row.label}
+    </span>
+
+    {row.type === "toggle" ? (
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          name={row.name}
+          checked={row.checked}
+          onChange={(event) => handleToggle(event, row)}
+        />
+        <span />
+      </label>
+    ) : row.type === "language" ? (
+      <select
+        className="settings-language-select"
+        name="language"
+        value={settings.language}
+        onChange={onSettingsChange}
+      >
+        <option>English</option>
+        <option>Hindi</option>
+        <option>Gujarati</option>
+      </select>
+    ) : (
+      <span className="settings-row-action">›</span>
+    )}
+  </div>
+))}
         </section>
         <button className="settings-save-button" onClick={onSettingsSave}>Save Settings</button>
         <button className="settings-logout" onClick={onLogout}>Log Out</button>
