@@ -417,12 +417,12 @@ function App() {
   setIsTyping(true);
 
   setTimeout(() => {
-    let replyText = "Thanks! I received your message. 😊";
+    let replyText = "Thanks! I received your message. ";
 
     const msg = currentMessage.toLowerCase();
 
     if (msg.includes("hello") || msg.includes("hi")) {
-      replyText = "Hi! 👋 Nice to connect with you on SkillSwap.";
+      replyText = "Hi! Nice to connect with you on SkillSwap.";
     } else if (msg.includes("react")) {
       replyText = "Sure! I can help you learn React Basics tomorrow.";
     } else if (msg.includes("python")) {
@@ -1996,7 +1996,7 @@ const getAutoReply = (msg) => {
   const text = msg.toLowerCase();
 
   if (text.includes("hello") || text.includes("hi")) {
-    return "Hi Isha! 😊 Nice to hear from you.";
+    return "Hi Isha!  Nice to hear from you.";
   }
 
   if (text.includes("react")) {
@@ -2053,7 +2053,7 @@ const getAutoReply = (msg) => {
         <div className="container dashboard-hero-inner">
           <div>
             <p className="dashboard-kicker">SKILLSWAP AI</p>
-            <h1>Hello, {user.name || 'Isha'} 👋</h1>
+            <h1>Hello, {user.name || 'Isha'} </h1>
             <p>Find your next skill or share yours!</p>
           </div>
           <button className="dashboard-avatar" aria-label="Open profile" onClick={() => setDashboardView('profile')}>
